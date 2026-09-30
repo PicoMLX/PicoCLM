@@ -1,32 +1,31 @@
-// swift-tools-version: 6.4
-// The swift-tools-version declares the minimum version of Swift required to build this package.
-
+// swift-tools-version: 6.2
 import PackageDescription
 
+// Opt in at manifest evaluation time so the core builds without resolving MLX.
+let enableMLX = Context.environment["PICO_CONTEXT_ENABLE_MLX"] == "1"
+var products: [Product] = [.library(name: "PicoContext", targets: ["PicoContext"])]
+var dependencies: [Package.Dependency] = []
+var targets: [Target] = [
+    .target(name: "PicoContext"),
+    .testTarget(name: "PicoContextTests", dependencies: ["PicoContext"]),
+]
+if enableMLX {
+    products.append(.library(name: "PicoContextMLX", targets: ["PicoContextMLX"]))
+    products.append(.executable(name: "ContextPlayground", targets: ["ContextPlayground"]))
+    dependencies.append(.package(url: "https://github.com/ml-explore/mlx-swift-lm", exact: "2.31.3"))
+    dependencies.append(.package(url: "https://github.com/ml-explore/mlx-swift", exact: "0.31.3"))
+    targets.append(.target(name: "PicoContextMLX", dependencies: [
+        "PicoContext",
+        .product(name: "MLXLLM", package: "mlx-swift-lm"),
+        .product(name: "MLXLMCommon", package: "mlx-swift-lm"),
+        .product(name: "MLX", package: "mlx-swift"),
+    ]))
+    targets.append(.executableTarget(name: "ContextPlayground", dependencies: [
+        "PicoContext", "PicoContextMLX",
+    ], path: "Examples/ContextPlayground"))
+}
 let package = Package(
-    name: "PicoCLM",
-    products: [
-        // Products define the executables and libraries a package produces, making them visible to other packages.
-        .library(
-            name: "PicoCLM",
-            targets: ["PicoCLM"]
-        ),
-    ],
-    targets: [
-        // Targets are the basic building blocks of a package, defining a module or a test suite.
-        // Targets can depend on other targets in this package and products from dependencies.
-        .target(
-            name: "PicoCLM",
-            swiftSettings: [
-                .enableUpcomingFeature("ApproachableConcurrency"),
-            ],
-        ),
-        .testTarget(
-            name: "PicoCLMTests",
-            dependencies: ["PicoCLM"],
-            swiftSettings: [
-                .enableUpcomingFeature("ApproachableConcurrency"),
-            ],
-        ),
-    ]
+    name: "PicoContext", platforms: [.macOS(.v15), .iOS(.v18)],
+    products: products, dependencies: dependencies, targets: targets,
+    swiftLanguageModes: [.v6]
 )
