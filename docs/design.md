@@ -1,5 +1,9 @@
 # Context Language Models in Swift
 
+> Design snapshot written before implementation. The first prototype is now
+> implemented; see [the README](../README.md) and [local validation](validation.md)
+> for current build instructions and measured results.
+
 Build a standalone Swift package, provisionally named `PicoContext`, with a minimal macOS SwiftUI example app. The demo should answer one question: can a local language model edit its working context, retain useful facts, and complete a task with less context or better results?
 
 Keep the first implementation small enough to understand and share as a public repository. Use one model, native Swift context-editing tools and a bundled task. Broader framework features and application integrations can follow if the results justify them.
