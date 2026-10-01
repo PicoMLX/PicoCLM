@@ -85,6 +85,12 @@ IDs, roles, protection or tool-link metadata. The caller supplies an opaque
 `ContextScope(userID:conversationID:branchID:)`; cross-scope and stale edits fail.
 System/developer records and the initial user task are protected.
 
+`ContextSession.originalContext` and `RunReport.original` expose the preserved
+session transcript; the report's `diff` includes earlier committed edits.
+`runStart` and `runStartPromptTokens` describe the working revision when that run
+began, while `originalPromptTokens` counts the preserved transcript's completion
+prompt. Token counts used for comparison are separate from actual call usage.
+
 Complete assistant/tool groups must survive or be deleted together. Replacing a
 body retains its role and links. A rejected edit leaves the last valid revision
 intact. `ContextSession` bounds repair, validates the actual next prompt against

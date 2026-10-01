@@ -91,6 +91,38 @@ private actor DeterministicBackend: ContextModelBackend {
     #expect(working.snapshot == original)
 }
 
+@Test func callerEditRemainsVisibleInSessionOriginalAndReport() async throws {
+    let session = try ContextSession(context: fixture(), counter: ByteCounter(), backend: DeterministicBackend())
+    try await session.apply(ContextEditTool.decode(arguments: validArguments, scope: scope))
+    let edited = await session.context
+    let report = try await session.run(mode: .appendOnly, budget: testBudget)
+    #expect(report.failure == nil)
+    #expect(await session.originalContext == fixture())
+    #expect(report.original == fixture())
+    #expect(report.runStart == edited)
+    #expect(report.revised == edited)
+    #expect(report.diff.contains("Deleted old-check"))
+    #expect(report.diff.contains("Replaced current-result"))
+    #expect(report.originalPromptTokens > report.runStartPromptTokens)
+    #expect(report.runStartPromptTokens == report.finalPrompt?.tokenCount)
+    #expect(report.finalPrompt?.input.context == edited)
+}
+
+@Test func repeatedRunsKeepThePreservedTranscriptAndPriorDiff() async throws {
+    let session = try ContextSession(context: fixture(), counter: ByteCounter(), backend: DeterministicBackend())
+    let first = try await session.run(budget: testBudget)
+    let second = try await session.run(mode: .appendOnly, budget: testBudget)
+    #expect(first.failure == nil)
+    #expect(second.failure == nil)
+    #expect(second.original == first.original)
+    #expect(second.runStart == first.revised)
+    #expect(second.revised == first.revised)
+    #expect(second.diff == first.diff)
+    #expect(second.originalPromptTokens == first.originalPromptTokens)
+    #expect(second.runStartPromptTokens == second.finalPrompt?.tokenCount)
+    #expect(second.finalPrompt?.input.context == first.revised)
+}
+
 @Test(arguments: ["instructions", "task"])
 func protectedRecordsCannotBeReplaced(id: String) throws {
     var working = try WorkingContext(fixture())

@@ -29,9 +29,13 @@ public struct EditAttempt: Sendable {
 
 public struct RunReport: Sendable {
     public let mode: RunMode
+    /// The immutable transcript supplied when the session was created.
     public let original: ContextSnapshot
+    /// The working revision at the start of this run, including earlier committed edits.
+    public let runStart: ContextSnapshot
     public let revised: ContextSnapshot
     public let originalPromptTokens: Int
+    public let runStartPromptTokens: Int
     public let finalPrompt: PreparedPrompt?
     public let calls: [PreparedPrompt]
     public let attempts: [EditAttempt]
@@ -70,6 +74,7 @@ public actor ContextSession {
     }
 
     public var context: ContextSnapshot { working.snapshot }
+    public var originalContext: ContextSnapshot { working.original }
 
     /// Caller edits use exactly the same validation and persistence boundary as model edits.
     public func apply(_ edit: ContextEdit) async throws {
@@ -89,8 +94,10 @@ public actor ContextSession {
         busy = true
         defer { busy = false }
         let start = Date()
-        let original = working.snapshot
+        let original = working.original
+        let runStart = working.snapshot
         var beforeTokens = 0
+        var runStartTokens = 0
         var finalPrompt: PreparedPrompt?
         var calls: [PreparedPrompt] = []
         var attempts: [EditAttempt] = []
@@ -120,6 +127,8 @@ public actor ContextSession {
                 throw ContextError.invalid("invalid run budget; edit attempts must be 1...4")
             }
             beforeTokens = try await counter.prepare(ModelInput(context: original, phase: .completion)).tokenCount
+            if runStart == original { runStartTokens = beforeTokens }
+            else { runStartTokens = try await counter.prepare(ModelInput(context: runStart, phase: .completion)).tokenCount }
             if mode == .editable {
                 var accepted = false
                 for attempt in 0..<budget.maxEditAttempts {
@@ -185,8 +194,9 @@ public actor ContextSession {
         } catch is CancellationError { throw CancellationError() }
         catch { failure = error.localizedDescription }
 
-        return RunReport(mode: mode, original: original, revised: working.snapshot,
-                         originalPromptTokens: beforeTokens, finalPrompt: finalPrompt, calls: calls,
+        return RunReport(mode: mode, original: original, runStart: runStart, revised: working.snapshot,
+                         originalPromptTokens: beforeTokens, runStartPromptTokens: runStartTokens,
+                         finalPrompt: finalPrompt, calls: calls,
                          attempts: attempts, answer: answer, failure: failure,
                          totalInputTokens: calls.reduce(0) { $0 + $1.tokenCount },
                          totalGeneratedTokens: generated, editCallCount: editCalls,
