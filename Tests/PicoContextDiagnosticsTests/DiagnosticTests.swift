@@ -11,6 +11,24 @@ private actor StepObserver {
     func record(_ report: DiagnosticStepReport) { reports.append(report) }
 }
 
+private actor CallbackGate {
+    private var continuation: CheckedContinuation<Void, Never>?
+    private var entered: CheckedContinuation<Void, Never>?
+
+    // Deliberately ignores cancellation, like a callback that catches its own cancellation error.
+    func suspend() async {
+        await withCheckedContinuation {
+            continuation = $0
+            entered?.resume()
+            entered = nil
+        }
+    }
+    func waitUntilEntered() async {
+        if continuation == nil { await withCheckedContinuation { entered = $0 } }
+    }
+    func release() { continuation?.resume(); continuation = nil }
+}
+
 private struct DiagnosticCounter: TokenCounting {
     func prepare(_ input: ModelInput) async -> PreparedPrompt {
         let text = input.instructions + (input.context.records + input.controlRecords).map {
@@ -253,4 +271,69 @@ func failedAnswerDeliveryIsReportedOnceAndPreservesModelUsage(answerID: String) 
 ])
 func structuredAnswersRequireExactState(json: String) {
     #expect(DiagnosticGrading.answerMatches(json, expected: ["units": "3", "owner": "Jo"]) == (json == "{\"facts\":{\"units\":\"3\",\"owner\":\"Jo\"}}"))
+}
+
+@Test(arguments: [
+    #"{"facts":{"units":"stale","units":"3","owner":"Jo"}}"#,
+    #"{"facts":{"units":"3","units":"stale","owner":"Jo"}}"#,
+    #"{"facts":{"units":"3","units":"3","owner":"Jo"}}"#,
+    #"{"facts":{"units":"stale","\u0075nits":"3","owner":"Jo"}}"#,
+    #"{"facts":{"units":"3","\u0075nits":"stale","owner":"Jo"}}"#,
+    #"{"facts":{"units":"stale"},"facts":{"units":"3","owner":"Jo"}}"#,
+    #"{"facts":{"units":"3","owner":"Jo"},"facts":{"units":"stale"}}"#,
+    #"{"facts":{"units":"3","owner":"Jo"},"facts":{"units":"3","owner":"Jo"}}"#,
+    #"{"facts":{"units":"stale"},"\u0066acts":{"units":"3","owner":"Jo"}}"#
+])
+func exactAnswersRejectDuplicateDecodedFactAndOuterKeys(json: String) {
+    #expect(!DiagnosticGrading.answerMatches(json, expected: ["units": "3", "owner": "Jo"]))
+}
+
+@Test(arguments: [
+    #"{"facts":{"owner":"Jo","units":"3"}}"#,
+    " \n { \"facts\" : { \"units\" : \"3\", \"owner\" : \"Jo\" } } \t\r",
+    #"{"\u0066acts":{"units":"\u0033","owner":"J\u006f"}}"#,
+    #"{"facts":{"\u0075nits":"3","owner":"\u004ao"}}"#
+])
+func exactAnswersAcceptUniqueDecodedKeysEscapesAndJSONWhitespace(json: String) {
+    #expect(DiagnosticGrading.answerMatches(json, expected: ["units": "3", "owner": "Jo"]))
+}
+
+@Test(arguments: [
+    #"{"facts":{"units":"3","owner":"Jo",}}"#,
+    #"{"facts":{"units":"3","owner":"Jo"}} true"#,
+    #"{"facts":{"units":"3","owner":"Jo\q"}}"#,
+    #"{"facts":{"units":"3","owner":"Jo}"#,
+    #"{"facts":{"units":"3","owner":{"name":"Jo"}}}"#
+])
+func exactAnswersRejectMalformedStringsSeparatorsAndNestedValues(json: String) {
+    #expect(!DiagnosticGrading.answerMatches(json, expected: ["units": "3", "owner": "Jo"]))
+}
+
+@Test func exactAnswersSupportEmptyStateAndArbitraryDecodedStringValues() {
+    #expect(DiagnosticGrading.answerMatches("{\"facts\":{}}", expected: [:]))
+    #expect(!DiagnosticGrading.answerMatches("{}", expected: [:]))
+    let expected = ["path": "folder/file", "quote": "\"\\\n", "unicode": "☕️", "empty": ""]
+    #expect(DiagnosticGrading.answerMatches(#"{"facts":{"path":"folder\/file","quote":"\"\\\n","unicode":"☕️","empty":""}}"#, expected: expected))
+}
+
+@Test(arguments: [RunMode.appendOnly, .editable])
+func cancellationDuringFinalCallbackPropagatesEvenWhenCallbackReturnsNormally(mode: RunMode) async throws {
+    let fixture = try DiagnosticEpisode.fixture(.retention, scope: scope, noiseLines: 0)
+    let episode = DiagnosticEpisode(title: fixture.title, initial: fixture.initial,
+                                    steps: Array(fixture.steps.prefix(1)), contextCheck: fixture.contextCheck)
+    let backend = NotebookBackend()
+    let gate = CallbackGate()
+    let observer = StepObserver()
+    let task = Task {
+        try await DiagnosticRunner(counter: DiagnosticCounter(), backend: backend).run(
+            episode, mode: mode, budget: budget, onStep: {
+                await observer.record($0)
+                await gate.suspend()
+            })
+    }
+    await gate.waitUntilEntered()
+    task.cancel()
+    await gate.release()
+    await #expect(throws: CancellationError.self) { try await task.value }
+    #expect(await observer.reports.count == 1)
 }

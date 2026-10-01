@@ -135,9 +135,64 @@ public enum DiagnosticGrading {
     }
 
     public static func answerMatches(_ answer: String, expected: [String: String]) -> Bool {
-        guard let object = try? JSONSerialization.jsonObject(with: Data(answer.utf8)) as? [String: Any],
-              Set(object.keys) == ["facts"], let facts = object["facts"] as? [String: String] else { return false }
-        return facts == expected
+        var parser = DiagnosticAnswerParser(answer)
+        return parser.facts() == expected
+    }
+}
+
+/// Parse only the answer schema, preserving object entries so duplicate decoded keys cannot disappear.
+/// Foundation handles JSON string escaping/Unicode; structural parsing accepts no other value types.
+private struct DiagnosticAnswerParser {
+    private let bytes: [UInt8]
+    private var offset = 0
+
+    init(_ text: String) { bytes = Array(text.utf8) }
+
+    mutating func facts() -> [String: String]? {
+        guard consume("{"), string() == "facts", consume(":"), consume("{") else { return nil }
+        var result: [String: String] = [:]
+        if !consume("}") {
+            while true {
+                guard let key = string(), consume(":"), let value = string(), result[key] == nil else { return nil }
+                result[key] = value
+                if consume("}") { break }
+                guard consume(",") else { return nil }
+            }
+        }
+        // The outer object contains exactly one facts entry; reject extras and duplicate facts objects.
+        guard consume("}") else { return nil }
+        whitespace()
+        return offset == bytes.count ? result : nil
+    }
+
+    private mutating func consume(_ delimiter: Unicode.Scalar) -> Bool {
+        whitespace()
+        guard offset < bytes.count, UInt32(bytes[offset]) == delimiter.value else { return false }
+        offset += 1
+        return true
+    }
+
+    private mutating func whitespace() {
+        // JSON allows only tab, line feed, carriage return and space outside strings.
+        while offset < bytes.count, [9, 10, 13, 32].contains(bytes[offset]) { offset += 1 }
+    }
+
+    private mutating func string() -> String? {
+        whitespace()
+        let start = offset
+        guard consume("\"") else { return nil }
+        while offset < bytes.count {
+            switch bytes[offset] {
+            case 34:
+                offset += 1
+                return try? JSONDecoder().decode(String.self, from: Data(bytes[start..<offset]))
+            case 92:
+                guard offset + 1 < bytes.count else { return nil }
+                offset += 2
+            default: offset += 1
+            }
+        }
+        return nil
     }
 }
 
@@ -218,9 +273,13 @@ public struct DiagnosticRunner: Sendable {
                                               failure: failure)
             reports.append(report)
             await onStep(report)
+            try Task.checkCancellation()
             if failure != nil { break }
         }
-        return DiagnosticReport(title: episode.title, mode: mode, steps: reports, original: await session.originalContext,
-                                revised: await session.context, failure: failure, elapsedSeconds: Date().timeIntervalSince(start))
+        let original = await session.originalContext
+        let revised = await session.context
+        try Task.checkCancellation()
+        return DiagnosticReport(title: episode.title, mode: mode, steps: reports, original: original,
+                                revised: revised, failure: failure, elapsedSeconds: Date().timeIntervalSince(start))
     }
 }

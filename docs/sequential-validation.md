@@ -13,7 +13,7 @@ were not available for execution.
 
 ## Deterministic checks
 
-`swift test` passes **42 core tests** and **11 diagnostic tests (34 cases)** with
+`swift test` passes **42 core tests** and **16 diagnostic tests (55 cases)** with
 zero external package dependencies, model downloads or GPU inference. Optional
 MLX tests pass **7 tests (61 cases)** without loading weights. The diagnostic
 library and core cross-build for `arm64-apple-ios18.0` with the installed SDK.
@@ -32,6 +32,11 @@ stops further generation once it cannot reserve the next response.
 Regression checks reject punctuation/combining-mark extensions of literal values.
 Empty or colliding caller answer IDs produce one failed step notification after
 delivery fails, preserving the generated answer, token usage and valid transcript.
+Exact-answer regressions reject duplicate decoded keys at both object levels,
+including conflicting, identical and escaped spellings. Valid JSON whitespace,
+reordered keys, escaped/Unicode string values and empty state remain supported.
+A deterministic callback gate verifies cancellation during the final notification
+throws in both modes even when that callback returns normally.
 
 ## Live model checks
 
