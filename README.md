@@ -101,14 +101,20 @@ session transcript; the report's `diff` includes earlier committed edits.
 `runStart` and `runStartPromptTokens` describe the working revision when that run
 began, while `originalPromptTokens` counts the preserved transcript's completion
 prompt. Token counts used for comparison are separate from actual call usage.
+If the preserved history cannot be rendered after a caller repairs the working
+context, `originalPromptTokens` is nil and `originalPromptFailure` explains why.
+That historical comparison does not block a valid current prompt.
 
 Complete assistant/tool groups must survive or be deleted together. Replacing a
-body retains its role and links. A rejected edit leaves the last valid revision
+body retains its role and links. Groups allow at most 31 tool calls so the
+assistant and all results fit the 32-operation atomic edit limit. A rejected edit leaves the last valid revision
 intact. `ContextSession` bounds repair, validates the actual next prompt against
 the budget before committing, and publishes a revision only after optional
 persistence succeeds. A protected control exchange acknowledges the edit outside
 the working history. The exact prepared token IDs are passed to generation;
 MLX creates fresh KV state for every call.
+Rejected model arguments and error details remain in the report; retry prompts
+contain only bounded runtime-authored guidance and the current revision.
 
 Public caller edits are available through `ContextSession.apply(_:)`. They use
 the same validation/persistence boundary; their token budget is checked when

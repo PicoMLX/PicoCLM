@@ -88,7 +88,7 @@ final class PlaygroundModel {
         """
         \(report.mode.rawValue): \(report.failure ?? "completed")
         Fixture check: \(report.failure == nil && PlaygroundFixture.answerIsCorrect(report.answer) ? "passed" : "failed")
-        Completion prompt: \(report.originalPromptTokens) → \(report.finalPrompt?.tokenCount ?? 0) tokens
+        Completion prompt: \(report.originalPromptTokens.map(String.init) ?? "unavailable") → \(report.finalPrompt?.tokenCount ?? 0) tokens
         Total input: \(report.totalInputTokens); generated: \(report.totalGeneratedTokens); edit calls: \(report.editCallCount)
         Elapsed: \(String(format: "%.2f", report.elapsedSeconds)) s
         Answer: \(report.answer)
@@ -131,7 +131,7 @@ private struct RunSnapshotView: View {
         VStack(alignment: .leading, spacing: 8) {
             Text(title).font(.headline)
             Text(report.failure == nil && PlaygroundFixture.answerIsCorrect(report.answer) ? "Fixture facts retained ✓" : "Fixture check failed")
-            Text("Completion prompt: \(report.originalPromptTokens) → \(report.finalPrompt?.tokenCount ?? 0) tokens")
+            Text("Completion prompt: \(report.originalPromptTokens.map(String.init) ?? "unavailable") → \(report.finalPrompt?.tokenCount ?? 0) tokens")
             Text("Total input: \(report.totalInputTokens) · generated: \(report.totalGeneratedTokens)")
             Text("Edit calls: \(report.editCallCount) · \(report.elapsedSeconds, specifier: "%.2f") seconds")
             Text(report.answer).font(.system(.body, design: .monospaced))
@@ -192,7 +192,7 @@ private struct ResultCard: View {
             VStack(alignment: .leading, spacing: 8) {
                 Text(report.failure == nil && PlaygroundFixture.answerIsCorrect(report.answer) ? "Fixture facts retained ✓" : "Fixture check failed")
                     .font(.headline)
-                Text("Prompt: \(report.originalPromptTokens) → \(report.finalPrompt?.tokenCount ?? 0) tokens")
+                Text("Prompt: \(report.originalPromptTokens.map(String.init) ?? "unavailable") → \(report.finalPrompt?.tokenCount ?? 0) tokens")
                 Text("Total input \(report.totalInputTokens) · generated \(report.totalGeneratedTokens) · edits \(report.editCallCount)")
                 Text("\(report.elapsedSeconds, specifier: "%.2f") seconds")
                 Text(report.answer.isEmpty ? (report.failure ?? "No answer") : report.answer).textSelection(.enabled)

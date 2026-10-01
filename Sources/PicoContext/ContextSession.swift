@@ -34,7 +34,9 @@ public struct RunReport: Sendable {
     /// The working revision at the start of this run, including earlier committed edits.
     public let runStart: ContextSnapshot
     public let revised: ContextSnapshot
-    public let originalPromptTokens: Int
+    /// Nil when the counter cannot render the preserved historical transcript.
+    public let originalPromptTokens: Int?
+    public let originalPromptFailure: String?
     public let runStartPromptTokens: Int
     public let finalPrompt: PreparedPrompt?
     public let calls: [PreparedPrompt]
@@ -96,7 +98,8 @@ public actor ContextSession {
         let start = Date()
         let original = working.original
         let runStart = working.snapshot
-        var beforeTokens = 0
+        var beforeTokens: Int?
+        var beforeFailure: String?
         var runStartTokens = 0
         var finalPrompt: PreparedPrompt?
         var calls: [PreparedPrompt] = []
@@ -126,9 +129,13 @@ public actor ContextSession {
                   budget.contextWindow <= 1_000_000, budget.totalTokens <= 10_000_000 else {
                 throw ContextError.invalid("invalid run budget; edit attempts must be 1...4")
             }
-            beforeTokens = try await counter.prepare(ModelInput(context: original, phase: .completion)).tokenCount
-            if runStart == original { runStartTokens = beforeTokens }
-            else { runStartTokens = try await counter.prepare(ModelInput(context: runStart, phase: .completion)).tokenCount }
+            runStartTokens = try await counter.prepare(ModelInput(context: runStart, phase: .completion)).tokenCount
+            if runStart == original { beforeTokens = runStartTokens }
+            else {
+                do { beforeTokens = try await counter.prepare(ModelInput(context: original, phase: .completion)).tokenCount }
+                catch is CancellationError { throw CancellationError() }
+                catch { beforeFailure = error.localizedDescription }
+            }
             if mode == .editable {
                 var accepted = false
                 for attempt in 0..<budget.maxEditAttempts {
@@ -168,8 +175,10 @@ public actor ContextSession {
                     catch {
                         let detail = error.localizedDescription
                         attempts.append(EditAttempt(arguments: arguments, modelText: response.text, accepted: false, detail: detail))
-                        control = Self.receipt(attempt: attempt, calls: response.toolCalls,
-                                               text: "Rejected: \(detail) Retry against revision \(working.snapshot.revision).",
+                        // Keep raw model values in the report, never in protected retry instructions.
+                        // A rejected call may contain invalid JSON, tool names or template delimiters.
+                        control = Self.receipt(attempt: attempt, calls: [],
+                                               text: "Rejected: use a valid edit_context call with existing unprotected IDs and complete tool groups. Retry against revision \(working.snapshot.revision).",
                                                reserving: reservedRecords)
                         continue
                     }
@@ -209,7 +218,7 @@ public actor ContextSession {
         catch { failure = error.localizedDescription }
 
         return RunReport(mode: mode, original: original, runStart: runStart, revised: working.snapshot,
-                         originalPromptTokens: beforeTokens, runStartPromptTokens: runStartTokens,
+                         originalPromptTokens: beforeTokens, originalPromptFailure: beforeFailure, runStartPromptTokens: runStartTokens,
                          finalPrompt: finalPrompt, calls: calls,
                          attempts: attempts, answer: answer, failure: failure,
                          totalInputTokens: calls.reduce(0) { $0 + $1.tokenCount },

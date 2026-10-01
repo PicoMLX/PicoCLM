@@ -133,6 +133,8 @@ public struct WorkingContext: Sendable {
                 guard record.toolCallID == nil else { throw ContextError.invalid("result ID on a non-tool record") }
                 if !record.toolCalls.isEmpty {
                     guard record.role == .assistant else { throw ContextError.invalid("only assistants call tools") }
+                    // The assistant plus every result must fit one bounded 32-operation deletion.
+                    guard record.toolCalls.count <= 31 else { throw ContextError.invalid("a tool group allows at most 31 calls") }
                     for call in record.toolCalls {
                         guard !call.id.isEmpty, !call.name.isEmpty, callIDs.insert(call.id).inserted else {
                             throw ContextError.invalid("empty or duplicate tool call ID/name")
