@@ -1,7 +1,7 @@
 import Foundation
 import PicoContext
 
-public enum DiagnosticScenario: String, CaseIterable, Sendable {
+public enum DiagnosticScenario: String, CaseIterable, Codable, Sendable {
     case retention, stateUpdates
 
     public var title: String {
