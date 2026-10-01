@@ -19,7 +19,11 @@ public struct DeterministicNotebookBackend: ContextModelBackend {
         try Task.checkCancellation()
         guard maxTokens > 0 else { throw ContextError.invalid("positive output allowance required") }
         if prompt.input.phase == .edit {
-            let records = prompt.input.context.records.filter { $0.role == .tool && !$0.isProtected }
+            // Summaries consolidate every editable body, including caller-appended
+            // answers. Body replacements preserve all roles and tool relationships.
+            let records = prompt.input.context.records.filter {
+                !$0.isProtected && (prompt.input.editStyle == .summarize || $0.role == .tool)
+            }
             let state = DiagnosticGrading.retainedState(in: prompt.input.context)
             let summary = state.keys.sorted().map { "FACT \($0)=\(state[$0]!)" }.joined(separator: "\n")
             let operations = records.compactMap { record -> [String: String]? in

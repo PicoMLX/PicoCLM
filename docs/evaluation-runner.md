@@ -67,8 +67,11 @@ initial loading and batch export are excluded.
 Summarization uses the same native tools and atomic validation, with separate
 original guidance to consolidate the current state across all unprotected history.
 It chooses an existing record body; it cannot invent a summary role/ID or change
-protected history. Both model-managed policies pay for a decision on every turn,
-including keeps and rejected attempts. Protected requests and tool metadata still
+protected history. The deterministic baseline clears superseded unprotected
+user, assistant and tool bodies and writes the notebook into the last editable
+record. It keeps the entire history when consolidation needs more than 32 changes,
+rather than applying a partial summary. Both model-managed policies pay for a
+decision on every turn, including keeps and rejected attempts. Protected requests and tool metadata still
 consume context. A short summary can have a larger final prompt because the edit
 receipt carries the summary again. This is a constrained baseline, not a
 replication of unrestricted file-based summarization in the paper.
@@ -81,7 +84,7 @@ See [the roadmap](evaluation-plan.md) for benchmark protocols and later gates.
 
 ## Validation of this stack
 
-On October 1, 2026, 43 core and 22 diagnostic test functions pass without MLX.
+On October 1, 2026, 43 core and 24 diagnostic test functions pass without MLX.
 Nine optional prompt test functions also pass without loading weights. The default
 three-policy deterministic batch passes 72 planned steps across two seeds and
 three order rotations. Byte counts are synthetic protocol measurements.

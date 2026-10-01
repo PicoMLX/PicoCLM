@@ -109,6 +109,18 @@ func batchRejectsInvalidBoundsBeforeCallingBackend(stepCount: Int) async throws 
         #expect(result.steps.flatMap(\.calls).allSatisfy { $0.editStyle == .summarize })
         #expect(result.inputTokens == result.steps.flatMap(\.calls).reduce(0) { $0 + $1.tokenIDs.count })
         #expect(result.generatedTokens > 0)
+        for step in result.steps {
+            let completion = try #require(step.calls.first { $0.phase == "completion" })
+            // Previous answers remain in the immutable transcript, but must not carry
+            // obsolete notebook state into the next summarized completion.
+            let original = try #require(step.original)
+            let priorAnswers = original.records.filter { $0.id.hasSuffix("-answer") }
+            for answer in priorAnswers {
+                #expect(!answer.body.isEmpty)
+                #expect(completion.context.records.first { $0.id == answer.id }?.body.isEmpty == true)
+            }
+            #expect(completion.context.records.filter { !$0.isProtected && !$0.body.isEmpty }.count == 1)
+        }
         #expect(result.revised.records.filter { $0.role == .tool && !$0.body.isEmpty }.count == 1)
         let originalProtected = result.original.records.filter(\.isProtected)
         #expect(result.revised.records.filter(\.isProtected) == originalProtected)
@@ -121,4 +133,58 @@ func batchRejectsInvalidBoundsBeforeCallingBackend(stepCount: Int) async throws 
     let summary = try #require(report.results.first { $0.policy == .summarization })
     #expect(summary.steps.map(\.incoming) == targeted.steps.map(\.incoming))
     #expect(summary.revised.records.filter { $0.role == .tool }.map(\.body) != targeted.revised.records.filter { $0.role == .tool }.map(\.body))
+}
+
+@Test func summarizationConsolidatesUserAndAssistantBodiesWithoutChangingToolRelationships() async throws {
+    let initial = ContextSnapshot(scope: evaluationScope, records: [
+        ContextRecord(id: "task", role: .user, body: "Report the current notebook.", isProtected: true),
+        ContextRecord(id: "user-notes", role: .user, body: "FACT owner=old\nFACT obsolete=yes"),
+        ContextRecord(id: "old-answer", role: .assistant, body: #"{"facts":{"owner":"old","obsolete":"yes"}}"#),
+        ContextRecord(id: "call", role: .assistant, body: "Reading the next update.", toolCalls: [
+            ContextToolCall(id: "input", name: "notebook_input", arguments: "{}")
+        ]),
+        ContextRecord(id: "data", role: .tool, body: "FACT owner=updated\nTelemetry discarded.", toolCallID: "input"),
+        ContextRecord(id: "user-update", role: .user, body: "REMOVE obsolete\nFACT units=3"),
+        ContextRecord(id: "request", role: .user, body: "Return the complete notebook.", isProtected: true)
+    ])
+    let backend = EvaluationSpy()
+    let session = try ContextSession(context: initial, counter: DiagnosticByteCounter(), backend: backend)
+    let run = try await session.run(budget: RunBudget(contextWindow: 32_768, totalTokens: 100_000), editStyle: .summarize)
+    #expect(run.failure == nil)
+    #expect(DiagnosticGrading.answerMatches(run.answer, expected: ["owner": "updated", "units": "3"]))
+    #expect(run.original == initial)
+    #expect(run.revised.scope == initial.scope)
+    #expect(run.revised.records.filter(\.isProtected) == initial.records.filter(\.isProtected))
+    let expected = initial.records.map { record in
+        ContextRecord(id: record.id, role: record.role,
+                      body: record.isProtected ? record.body : (record.id == "user-update" ? "FACT owner=updated\nFACT units=3" : ""),
+                      isProtected: record.isProtected, toolCalls: record.toolCalls, toolCallID: record.toolCallID)
+    }
+    #expect(run.revised.records == expected)
+    try WorkingContext.validate(run.revised)
+    let completion = try #require(await backend.prompts.first { $0.input.phase == .completion })
+    #expect(completion.input.context == run.revised)
+    #expect(!completion.input.context.records.contains { $0.body.contains("obsolete") || $0.body.contains(#""owner":"old""#) })
+}
+
+@Test(arguments: [32, 33])
+func summarizationKeepsHistoryWhenFullConsolidationExceedsOperationLimit(recordCount: Int) async throws {
+    let records = [ContextRecord(id: "task", role: .user, body: "Keep the current notebook.", isProtected: true)]
+        + (0..<recordCount).map { index in
+            ContextRecord(id: "history-\(index)", role: .assistant, body: index == 0 ? "FACT owner=Jo" : "Previous answer \(index)")
+        }
+    let initial = ContextSnapshot(scope: evaluationScope, records: records)
+    let session = try ContextSession(context: initial, counter: DiagnosticByteCounter(), backend: DeterministicNotebookBackend())
+    let run = try await session.run(budget: RunBudget(contextWindow: 32_768, totalTokens: 100_000, editOutputTokens: 4_096),
+                                   editStyle: .summarize)
+    #expect(run.failure == nil)
+    #expect(DiagnosticGrading.answerMatches(run.answer, expected: ["owner": "Jo"]))
+    #expect(run.original == initial)
+    if recordCount == 32 {
+        #expect(run.revised.records.filter { !$0.isProtected && !$0.body.isEmpty }.count == 1)
+        #expect(run.revised.records.last?.body == "FACT owner=Jo")
+        #expect(run.revised.revision == initial.revision + 1)
+    } else {
+        #expect(run.revised == initial)
+    }
 }
