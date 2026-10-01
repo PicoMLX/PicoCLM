@@ -13,7 +13,7 @@ public enum DiagnosticScenario: String, CaseIterable, Sendable {
 }
 
 public enum DiagnosticContextCheck: String, Sendable {
-    /// Literal value survival anywhere in live bodies, independently of note formatting.
+    /// Complete literal values in live bodies, framed by whitespace, quotes or note separators.
     case exactValues
     /// Execute the fixture's line-based FACT/REMOVE protocol in live record order.
     case notebookState
@@ -125,7 +125,10 @@ public enum DiagnosticGrading {
             // Check before this turn's answer appends. Earlier caller-appended answers are live history.
             return expected.filter { _, value in
                 guard !value.isEmpty else { return false }
-                let pattern = "(?<![\\p{L}\\p{N}_:/-])" + NSRegularExpression.escapedPattern(for: value) + "(?![\\p{L}\\p{N}_:/-])"
+                // Use explicit framing, rather than guessing which punctuation belongs to an identifier.
+                // An assignment may start a value; it cannot terminate one (e.g. needle=other).
+                let pattern = #"(?<![^\s"'`=,;()\[\]{}])"# + NSRegularExpression.escapedPattern(for: value)
+                    + #"(?![^\s"'`,;()\[\]{}])"#
                 return context.records.contains { $0.body.range(of: pattern, options: .regularExpression) != nil }
             }
         }
@@ -186,6 +189,7 @@ public struct DiagnosticRunner: Sendable {
         for step in episode.steps {
             try Task.checkCancellation()
             var run: RunReport?
+            var retained: [String: String] = [:]
             do {
                 guard used < episodeTokenLimit else { throw ContextError.budgetExceeded("episode token allowance exhausted") }
                 let current = await session.context
@@ -196,25 +200,25 @@ public struct DiagnosticRunner: Sendable {
                 let result = try await session.run(mode: mode, budget: stepBudget)
                 run = result
                 used += result.totalInputTokens + result.totalGeneratedTokens
-                let retained = DiagnosticGrading.retainedFacts(in: result.revised, expected: step.expectedFacts, check: episode.contextCheck)
-                reports.append(DiagnosticStepReport(step: step, run: result, retainedFacts: retained,
-                                                    retainedCorrect: retained == step.expectedFacts,
-                                                    answerCorrect: result.failure == nil && DiagnosticGrading.answerMatches(result.answer, expected: step.expectedFacts),
-                                                    failure: result.failure))
-                if let latest = reports.last { await onStep(latest) }
-                if let error = result.failure { failure = error; break }
-                // Runtime/caller chooses the record identity; the model only supplied its body.
-                try await session.append(ContextAppend(scope: result.revised.scope, baseRevision: result.revised.revision,
-                                                       records: [ContextRecord(id: step.answerRecordID, role: .assistant, body: result.answer)]))
+                retained = DiagnosticGrading.retainedFacts(in: result.revised, expected: step.expectedFacts, check: episode.contextCheck)
+                if let error = result.failure { failure = error }
+                else {
+                    // Runtime/caller chooses the record identity; the model only supplied its body.
+                    try await session.append(ContextAppend(scope: result.revised.scope, baseRevision: result.revised.revision,
+                                                           records: [ContextRecord(id: step.answerRecordID, role: .assistant, body: result.answer)]))
+                }
             } catch is CancellationError { throw CancellationError() }
             catch {
                 failure = error.localizedDescription
-                if run == nil {
-                    reports.append(DiagnosticStepReport(step: step, run: nil, retainedFacts: [:], retainedCorrect: false,
-                                                        answerCorrect: false, failure: failure))
-                }
-                break
             }
+            // Publish once, after delivery: a model answer is not a successful step until it enters history.
+            let report = DiagnosticStepReport(step: step, run: run, retainedFacts: retained,
+                                              retainedCorrect: run != nil && retained == step.expectedFacts,
+                                              answerCorrect: failure == nil && run.map { DiagnosticGrading.answerMatches($0.answer, expected: step.expectedFacts) } == true,
+                                              failure: failure)
+            reports.append(report)
+            await onStep(report)
+            if failure != nil { break }
         }
         return DiagnosticReport(title: episode.title, mode: mode, steps: reports, original: await session.originalContext,
                                 revised: await session.context, failure: failure, elapsedSeconds: Date().timeIntervalSince(start))

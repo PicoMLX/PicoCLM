@@ -57,12 +57,16 @@ Both policies receive the same operations and use the same sampling/budgets.
 Budget failures stop explicitly; incoming records are never silently truncated.
 
 These are original diagnostics inspired by the paper, **not official ContextBench
-scores**. Retention checks exact literal values in live bodies, regardless of note
-style, before appending that turn's answer. Earlier caller-appended answers count
+scores**. Retention checks complete literal values framed by whitespace, quotes,
+commas, semicolons or brackets (an assignment `=` can precede a value). Punctuation
+extensions such as `invoice-0097.old` do not count as `invoice-0097`. Checks run
+before appending that turn's answer. Earlier caller-appended answers count
 as live context. State updates use a separate grader that folds `FACT key=value`
 and `REMOVE key` operation lines in record order. Each answer must match the complete expected string-valued dictionary;
 substring matches cannot conceal missing or stale values. The UI shows per-step
 checks, prompt counts, cumulative call usage, original/working records and exact inputs.
+Each step is published after answer delivery; a failed append marks its answer
+unsuccessful and preserves the model result and token usage for inspection.
 See [sequential validation](docs/sequential-validation.md) for actual positive and
 failed runs, and [the evaluation plan](docs/evaluation-plan.md) for the official
 integration milestone.

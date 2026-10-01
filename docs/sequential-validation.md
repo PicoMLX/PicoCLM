@@ -13,7 +13,7 @@ were not available for execution.
 
 ## Deterministic checks
 
-`swift test` passes **42 core tests** and **9 diagnostic tests (21 cases)** with
+`swift test` passes **42 core tests** and **11 diagnostic tests (34 cases)** with
 zero external package dependencies, model downloads or GPU inference. Optional
 MLX tests pass **7 tests (61 cases)** without loading weights. The diagnostic
 library and core cross-build for `arm64-apple-ios18.0` with the installed SDK.
@@ -29,6 +29,9 @@ checks value survival independently of note style; state updates execute the
 separate line-based notebook protocol. Earlier caller-appended answers are live history. Pressure tests show compaction continuing after append-only exceeds the
 window, without truncating the incoming operation. A separate episode allowance
 stops further generation once it cannot reserve the next response.
+Regression checks reject punctuation/combining-mark extensions of literal values.
+Empty or colliding caller answer IDs produce one failed step notification after
+delivery fails, preserving the generated answer, token usage and valid transcript.
 
 ## Live model checks
 
@@ -39,7 +42,7 @@ sampling and budgets. The below-window profile has 12 telemetry lines per update
 a 4,096-token window, 24,000 per-turn tokens, 80,000 whole-episode tokens, four
 bounded decision attempts of 1,024 output tokens, and 512 completion tokens.
 
-The current retention run passed all four literal-context and exact-answer checks
+The recorded retention run passed all four literal-context and exact-answer checks
 in both modes. The editable trajectory dispatched four accepted edits and used
 11,580 input / 331 generated tokens in 51.37 seconds, versus 6,059 / 99 in
 9.33 seconds for append-only. Its last completion prompt was 1,406 tokens versus
@@ -47,6 +50,8 @@ in both modes. The editable trajectory dispatched four accepted edits and used
 The [raw retention transcript](live-retention.txt) includes both policies, generated
 edits and exact next inputs. This image is rendered by SwiftUI from those actual
 reports, not a desktop capture.
+Later deterministic regressions tightened literal framing and answer-delivery error
+reporting; these model calls were not rerun for those changes.
 
 ![Actual four-turn retention run](images/sequential-retention.png)
 

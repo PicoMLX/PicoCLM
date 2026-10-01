@@ -6,6 +6,11 @@ import Testing
 private let scope = ContextScope(userID: "diagnostic-user", conversationID: "stream", branchID: "main")
 private let budget = RunBudget(contextWindow: 32_000, totalTokens: 120_000)
 
+private actor StepObserver {
+    private(set) var reports: [DiagnosticStepReport] = []
+    func record(_ report: DiagnosticStepReport) { reports.append(report) }
+}
+
 private struct DiagnosticCounter: TokenCounting {
     func prepare(_ input: ModelInput) async -> PreparedPrompt {
         let text = input.instructions + (input.context.records + input.controlRecords).map {
@@ -139,6 +144,63 @@ func literalRetentionDoesNotDependOnNoteStyleOrCreditExtendedIdentifiers(body: S
     let expected = ["amber": "TQ-4819-X", "beryl": "M8:blue/42"]
     let retained = DiagnosticGrading.retainedFacts(in: snapshot, expected: expected, check: .exactValues)
     #expect(retained == (body.contains("TQ-4819-XX") ? [:] : expected))
+}
+
+@Test(arguments: [
+    "FACT coral=invoice-0097.old",
+    "FACT coral=invoice-0097@archive",
+    "FACT coral=invoice-0097+1",
+    "FACT coral=invoice-0097#copy",
+    "FACT coral=invoice-0097=old",
+    "FACT coral=invoice-0097\\old",
+    "FACT coral=invoice-0097\u{301}",
+    "Notes: coral=old.invoice-0097",
+    "{\"facts\":{\"coral\":\"invoice-0097.old\"}}",
+    "FACT coral=invoice-0097.old; FACT amber=TQ-4819-X"
+])
+func exactRetentionRejectsPunctuationAndCombiningMarkExtensions(body: String) {
+    let snapshot = ContextSnapshot(scope: scope, records: [ContextRecord(id: "note", role: .assistant, body: body)])
+    #expect(DiagnosticGrading.retainedFacts(in: snapshot, expected: ["coral": "invoice-0097"], check: .exactValues).isEmpty)
+}
+
+@Test(arguments: ["", "instructions", "step-1-answer"])
+func failedAnswerDeliveryIsReportedOnceAndPreservesModelUsage(answerID: String) async throws {
+    let fixture = try DiagnosticEpisode.fixture(.retention, scope: scope, noiseLines: 0)
+    let failingIndex = answerID == "step-1-answer" ? 1 : 0
+    let steps = fixture.steps.enumerated().map { index, step in
+        DiagnosticStep(id: step.id, records: step.records,
+                       answerRecordID: index == failingIndex ? answerID : step.answerRecordID,
+                       expectedFacts: step.expectedFacts)
+    }
+    let episode = DiagnosticEpisode(title: fixture.title, initial: fixture.initial, steps: steps, contextCheck: fixture.contextCheck)
+    let backend = NotebookBackend()
+    let observer = StepObserver()
+    let report = try await DiagnosticRunner(counter: DiagnosticCounter(), backend: backend).run(
+        episode, mode: .appendOnly, budget: budget, episodeTokenLimit: 120_000,
+        onStep: { await observer.record($0) })
+    let failure = try #require(report.failure)
+    #expect(!report.passed)
+    #expect(report.steps.count == failingIndex + 1)
+    let last = try #require(report.steps.last)
+    #expect(last.failure == failure)
+    #expect(last.retainedCorrect)
+    #expect(!last.answerCorrect)
+    let run = try #require(last.run)
+    #expect(run.failure == nil)
+    #expect(DiagnosticGrading.answerMatches(run.answer, expected: last.step.expectedFacts))
+    #expect(report.totalInputTokens > 0)
+    #expect(report.totalGeneratedTokens == 4 * report.steps.count)
+    #expect(await backend.prompts.count == report.steps.count)
+    #expect(report.revised == run.revised)
+    #expect(report.revised.records.last?.id == "\(last.step.id)-request")
+    #expect(report.original.records.last?.id == "\(last.step.id)-request")
+    let callbacks = await observer.reports
+    #expect(callbacks.count == report.steps.count)
+    #expect(callbacks.last?.failure == failure)
+    #expect(callbacks.last?.answerCorrect == false)
+    #expect(callbacks.dropLast().allSatisfy { $0.failure == nil && $0.answerCorrect })
+    try WorkingContext.validate(report.original)
+    try WorkingContext.validate(report.revised)
 }
 
 @Test func updatesAndRemovalsAreGradedInLiveOrder() throws {
