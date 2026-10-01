@@ -83,6 +83,10 @@ allowance and 512-token completion cap; editing has at most two attempts of
 Elapsed inference time excludes initial model loading. The baseline runs first,
 so warm-up and order effects prevent interpreting one run as a speed benchmark.
 
+The Qwen adapter rejects structural chat and tool-wrapper delimiters in record
+bodies and metadata before tokenization. Tool arguments encode literal `<` as a
+JSON escape, preserving the argument value without introducing a wrapper boundary.
+
 ## The loop and its boundaries
 
 `WorkingContext` preserves the original transcript and validates a candidate

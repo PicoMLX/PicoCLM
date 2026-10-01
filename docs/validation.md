@@ -14,8 +14,8 @@ runtime/compiler combinations are not claimed as tested.
   collisions with retained and deleted caller IDs, including retry/acceptance feedback.
   Persistence failures retain the current revision, report the storage error and
   stop without requesting another model edit.
-- **4 opt-in MLX adapter tests passed** (20 cases across parameterized tests), without
-  loading weights or running inference. They reject Qwen delimiters in message text,
+- **4 opt-in MLX adapter tests passed** (57 cases across parameterized tests), without
+  loading weights or running inference. They reject Qwen chat/tool-wrapper delimiters in message text,
   record IDs, tool IDs/names and control metadata; safe metadata preserves roles/links
   and escaped tool arguments round-trip without changing their JSON value.
 - Core cross-build passed with `--triple arm64-apple-ios18.0` and the installed

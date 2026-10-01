@@ -44,9 +44,10 @@ public actor MLXContextBackend: TokenCounting, ContextModelBackend {
             let fields = [record.body, record.id] + [record.toolCallID].compactMap { $0 }
                 + record.toolCalls.flatMap { [$0.id, $0.name] }
             guard !fields.contains(where: { field in
-                ["<|im_start|>", "<|im_end|>", "<|endoftext|>"].contains(where: field.contains)
+                ["<|im_start|>", "<|im_end|>", "<|endoftext|>",
+                 "<tool_call>", "</tool_call>", "<tool_response>", "</tool_response>"].contains(where: field.contains)
             }) else {
-                throw ContextError.invalid("record text or metadata contains a reserved Qwen chat delimiter")
+                throw ContextError.invalid("record text or metadata contains a reserved Qwen delimiter")
             }
             // Metadata is descriptive text; actual roles and links are always supplied separately.
             var message: Message = [
