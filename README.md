@@ -120,6 +120,18 @@ The Qwen adapter rejects structural chat and tool-wrapper delimiters in record
 bodies and metadata before tokenization. Tool arguments encode literal `<` as a
 JSON escape, preserving the argument value without introducing a wrapper boundary.
 
+## Batch evaluation
+
+Run original seeded diagnostics without the GUI:
+
+```sh
+swift run ContextEvaluate --output /tmp/picocontext-deterministic.json
+```
+
+For local MLX, matched budgets, pressure profiles and exact JSON traces, see
+[the evaluation runner](docs/evaluation-runner.md). It reuses the existing model
+directory and never downloads weights.
+
 ## The loop and its boundaries
 
 `WorkingContext` preserves the original transcript and validates a candidate

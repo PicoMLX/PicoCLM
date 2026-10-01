@@ -50,3 +50,9 @@ As checked October 1, 2026, Meta's repository lists ContextBench as coming soon.
 The [evaluation plan](evaluation-plan.md) records a separate milestone to pin the
 official release and verify generator/data/evaluator licensing and protocol before
 integration. No unrelated project sharing the ContextBench name is substituted.
+
+
+The seeded evaluation streams, deterministic notebook backend, JSON trace format
+and runner prompts are original project contributions. SplitMix64 arithmetic is
+used to identify reproducible synthetic task instances; seeds do not change
+greedy model sampling. The runner uses the existing pinned model adapter only.

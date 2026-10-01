@@ -1,0 +1,21 @@
+{
+  "scenario": "retention",
+  "seeds": [
+    17
+  ],
+  "repetitions": 2,
+  "stepCount": 4,
+  "noiseLines": 12,
+  "policies": [
+    "appendOnly",
+    "editable"
+  ],
+  "limits": {
+    "contextWindow": 4096,
+    "turnTokens": 24000,
+    "episodeTokens": 80000,
+    "decisionOutput": 1024,
+    "completionOutput": 512,
+    "decisionAttempts": 4
+  }
+}

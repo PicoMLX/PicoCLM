@@ -7,6 +7,7 @@ var products: [Product] = [
     .library(name: "PicoContext", targets: ["PicoContext"]),
     .library(name: "PicoContextDiagnostics", targets: ["PicoContextDiagnostics"]),
 ]
+var evaluationDependencies: [Target.Dependency] = ["PicoContext", "PicoContextDiagnostics"]
 var dependencies: [Package.Dependency] = []
 var targets: [Target] = [
     .target(name: "PicoContext"),
@@ -15,6 +16,7 @@ var targets: [Target] = [
     .testTarget(name: "PicoContextDiagnosticsTests", dependencies: ["PicoContext", "PicoContextDiagnostics"]),
 ]
 if enableMLX {
+    evaluationDependencies.append("PicoContextMLX")
     products.append(.library(name: "PicoContextMLX", targets: ["PicoContextMLX"]))
     products.append(.executable(name: "ContextPlayground", targets: ["ContextPlayground"]))
     dependencies.append(.package(url: "https://github.com/ml-explore/mlx-swift-lm", exact: "2.31.3"))
@@ -30,6 +32,9 @@ if enableMLX {
     ], path: "Examples/ContextPlayground"))
     targets.append(.testTarget(name: "PicoContextMLXTests", dependencies: ["PicoContext", "PicoContextMLX"]))
 }
+products.append(.executable(name: "ContextEvaluate", targets: ["ContextEvaluate"]))
+targets.append(.executableTarget(name: "ContextEvaluate", dependencies: evaluationDependencies,
+                                 swiftSettings: enableMLX ? [.define("PICO_CONTEXT_HAS_MLX")] : []))
 let package = Package(
     name: "PicoContext", platforms: [.macOS(.v15), .iOS(.v18)],
     products: products, dependencies: dependencies, targets: targets,
