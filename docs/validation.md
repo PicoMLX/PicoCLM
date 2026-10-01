@@ -19,7 +19,7 @@ runtime/compiler combinations are not claimed as tested.
   and rejected model delimiters cannot poison bounded retry prompts.
   Unknown/multiple/clipped tool emissions are excluded from native dispatch counts.
   Cancellation propagates after generation even when the backend returns normally.
-- **5 opt-in MLX adapter tests passed** (58 cases across parameterized tests), without
+- **6 opt-in MLX adapter tests passed** (60 cases across parameterized tests), without
   loading weights or running inference. They reject Qwen chat/tool-wrapper delimiters in message text,
   record IDs, tool IDs/names and control metadata; safe metadata preserves roles/links
   and escaped tool arguments round-trip without changing their JSON value.
