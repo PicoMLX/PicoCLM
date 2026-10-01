@@ -35,7 +35,7 @@ func seededStreamsAreStableAndPressureDoesNotChangeTaskFacts(scenario: Diagnosti
 func batchBalancesOrderAndExportsActualCallsAndContexts(scenario: DiagnosticScenario) async throws {
     let backend = EvaluationSpy()
     let configuration = EvaluationConfiguration(scenario: scenario, seeds: [17, 29], repetitions: 2,
-                                                 stepCount: 5, noiseLines: 2, limits: byteLimits)
+                                                 stepCount: 5, noiseLines: 2, policies: [.appendOnly, .editable], limits: byteLimits)
     let report = try await EvaluationRunner(counter: DiagnosticByteCounter(), backend: backend).run(
         configuration, scope: evaluationScope, provenance: provenance)
     #expect(report.results.map(\.policy) == [.appendOnly, .editable, .editable, .appendOnly, .editable, .appendOnly, .appendOnly, .editable])
@@ -92,4 +92,33 @@ func batchRejectsInvalidBoundsBeforeCallingBackend(stepCount: Int) async throws 
     #expect(throws: ContextError.self) { try EvaluationConfiguration(seeds: [17, 17]).validate() }
     #expect(throws: ContextError.self) { try EvaluationConfiguration(policies: [.editable, .editable]).validate() }
     #expect(throws: ContextError.self) { try EvaluationConfiguration(seeds: [1, 2, 3], repetitions: 4, stepCount: 32).validate() }
+}
+
+@Test func summarizationConsolidatesHistoryAndChargesEveryDecision() async throws {
+    let configuration = EvaluationConfiguration(scenario: .stateUpdates, seeds: [17], repetitions: 3,
+                                                 stepCount: 10, noiseLines: 4, limits: byteLimits)
+    let backend = EvaluationSpy()
+    let report = try await EvaluationRunner(counter: DiagnosticByteCounter(), backend: backend).run(
+        configuration, scope: evaluationScope, provenance: provenance)
+    #expect(report.results.map(\.policy) == [.appendOnly, .editable, .summarization,
+                                             .editable, .summarization, .appendOnly,
+                                             .summarization, .appendOnly, .editable])
+    #expect(report.results.allSatisfy { $0.passed })
+    for result in report.results.filter({ $0.policy == .summarization }) {
+        #expect(result.steps.flatMap(\.calls).filter { $0.phase == "edit" }.count == 10)
+        #expect(result.steps.flatMap(\.calls).allSatisfy { $0.editStyle == .summarize })
+        #expect(result.inputTokens == result.steps.flatMap(\.calls).reduce(0) { $0 + $1.tokenIDs.count })
+        #expect(result.generatedTokens > 0)
+        #expect(result.revised.records.filter { $0.role == .tool && !$0.body.isEmpty }.count == 1)
+        let originalProtected = result.original.records.filter(\.isProtected)
+        #expect(result.revised.records.filter(\.isProtected) == originalProtected)
+        let originalMetadata = result.original.records.map { [$0.id, $0.role.rawValue, $0.toolCallID ?? "", $0.toolCalls.map(\.id).joined(separator: ",")] }
+        let revisedMetadata = result.revised.records.map { [$0.id, $0.role.rawValue, $0.toolCallID ?? "", $0.toolCalls.map(\.id).joined(separator: ",")] }
+        #expect(originalMetadata == revisedMetadata)
+        try WorkingContext.validate(result.revised)
+    }
+    let targeted = try #require(report.results.first { $0.policy == .editable })
+    let summary = try #require(report.results.first { $0.policy == .summarization })
+    #expect(summary.steps.map(\.incoming) == targeted.steps.map(\.incoming))
+    #expect(summary.revised.records.filter { $0.role == .tool }.map(\.body) != targeted.revised.records.filter { $0.role == .tool }.map(\.body))
 }

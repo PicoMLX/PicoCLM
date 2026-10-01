@@ -4,6 +4,7 @@
 isolated continuous sessions. It uses the same caller scope, incoming records,
 task instructions and allowances for every policy. It rotates policy order across
 seeds/repetitions; use a multiple of the policy count for full counterbalancing.
+Policies are append-only, targeted editing and whole-history summarization.
 Runs are sequential and reuse one backend. Loading is excluded from episode time;
 each model call still recomputes its exact prompt with fresh KV state.
 
@@ -47,7 +48,7 @@ an isolated comparison policy from running.
 
 ## Reading reports
 
-Schema version 1 records configuration/provenance, execution order, seed, repeat,
+Schema version 2 records configuration/provenance, execution order, seed, repeat,
 original/working contexts, every incoming operation, exact retained/answer grades,
 model answers, decisions/rejections, all dispatched prompts and their token IDs,
 and all dispatched input/generated usage. Planned-step denominators include steps
@@ -63,8 +64,30 @@ dispatched. Prompt preparation for historical comparisons is not charged as a
 model call. Elapsed episode time includes preparation, grading and delivery;
 initial loading and batch export are excluded.
 
+Summarization uses the same native tools and atomic validation, with separate
+original guidance to consolidate the current state across all unprotected history.
+It chooses an existing record body; it cannot invent a summary role/ID or change
+protected history. Both model-managed policies pay for a decision on every turn,
+including keeps and rejected attempts. Protected requests and tool metadata still
+consume context. A short summary can have a larger final prompt because the edit
+receipt carries the summary again. This is a constrained baseline, not a
+replication of unrestricted file-based summarization in the paper.
+
 Reports do not yet measure FLOPs, prefix reuse, process/GPU peak memory, official
 ContextBench scores or statistical accuracy. Task seeds are reproducible input
 instances; repetitions expose order/timing effects under greedy inference, not
 independent model sampling. Use separate held-out seeds before tuning prompts.
 See [the roadmap](evaluation-plan.md) for benchmark protocols and later gates.
+
+## Validation of this stack
+
+On October 1, 2026, 43 core and 22 diagnostic test functions pass without MLX.
+Nine optional prompt test functions also pass without loading weights. The default
+three-policy deterministic batch passes 72 planned steps across two seeds and
+three order rotations. Byte counts are synthetic protocol measurements.
+
+The first two-policy live retention run at commit ef4c6d4 reproduced these failures
+in both order rotations: append-only retained 4/4 but answered 2/4; editable retained
+2/4 and answered 1/4 before a completion-phase tool call was rejected. The current
+summarization stack changes the shared task guidance and needs its own live report;
+those earlier results are not relabeled as measurements of the revised prompts.
