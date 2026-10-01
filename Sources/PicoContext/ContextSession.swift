@@ -111,6 +111,7 @@ public actor ContextSession {
         var control: [ContextRecord] = []
 
         func checkBudget(_ prompt: PreparedPrompt, output: Int, reserve: Int = 0) throws {
+            try Task.checkCancellation()
             guard prompt.tokenCount <= budget.contextWindow - output else {
                 throw ContextError.budgetExceeded("input plus reserved output exceeds the context window")
             }
@@ -144,11 +145,11 @@ public actor ContextSession {
                     try checkBudget(prompt, output: budget.editOutputTokens, reserve: budget.completionOutputTokens)
                     calls.append(prompt)
                     let response = try await backend.generate(prompt, maxTokens: budget.editOutputTokens)
+                    try Task.checkCancellation()
                     guard response.generatedTokens >= 0, response.generatedTokens <= budget.editOutputTokens else {
                         throw ContextError.invalid("backend reported invalid token usage")
                     }
                     generated += response.generatedTokens
-                    editCalls += response.toolCalls.count
                     let arguments = response.toolCalls.map(\.arguments).joined(separator: "\n")
                     let reservedRecords = original.records + working.snapshot.records + control
                     let candidate: WorkingContext
@@ -162,6 +163,7 @@ public actor ContextSession {
                         }
                         let call = response.toolCalls[0]
                         guard call.name == ContextEditTool.name else { throw ContextError.invalid("unknown context tool") }
+                        editCalls += 1
                         let edit = try ContextEditTool.decode(arguments: call.arguments, scope: working.snapshot.scope)
                         var validated = working
                         try validated.apply(edit)
@@ -207,6 +209,7 @@ public actor ContextSession {
             finalPrompt = prepared
             calls.append(prepared)
             let response = try await backend.generate(prepared, maxTokens: budget.completionOutputTokens)
+            try Task.checkCancellation()
             guard response.generatedTokens >= 0, response.generatedTokens <= budget.completionOutputTokens else {
                 throw ContextError.invalid("backend reported invalid token usage")
             }
