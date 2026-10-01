@@ -19,10 +19,12 @@ private actor NotebookBackend: ContextModelBackend {
     private(set) var prompts: [PreparedPrompt] = []
     private let loseNeedle: Bool
     private var forcedAnswers: [[String: String]]
+    private var rawAnswers: [String]
 
-    init(loseNeedle: Bool = false, forcedAnswers: [[String: String]] = []) {
+    init(loseNeedle: Bool = false, forcedAnswers: [[String: String]] = [], rawAnswers: [String] = []) {
         self.loseNeedle = loseNeedle
         self.forcedAnswers = forcedAnswers
+        self.rawAnswers = rawAnswers
     }
 
     func generate(_ prompt: PreparedPrompt, maxTokens: Int) throws -> ModelResponse {
@@ -54,6 +56,7 @@ private actor NotebookBackend: ContextModelBackend {
                 } else if parts[0] == "REMOVE" { state.removeValue(forKey: String(parts[1])) }
             }
         }
+        if !rawAnswers.isEmpty { return ModelResponse(text: rawAnswers.removeFirst(), generatedTokens: 4) }
         if !forcedAnswers.isEmpty { state = forcedAnswers.removeFirst() }
         let data = try JSONEncoder().encode(["facts": state])
         return ModelResponse(text: String(decoding: data, as: UTF8.self), generatedTokens: 4)
@@ -111,6 +114,22 @@ func sequentialEpisodesDeliverOperationsAndCallerRepliesIntoExactNextInput(scena
     #expect(!report.passed)
     #expect(!DiagnosticGrading.retainedState(in: report.revised).keys.contains("amber"))
     #expect(report.original.records.contains { $0.body.contains("FACT amber=TQ-4819-X") })
+}
+
+@Test func callerAppendedNotesCanRestoreStateWithoutErasingEarlierFailures() async throws {
+    let fixture = try DiagnosticEpisode.fixture(.retention, scope: scope, noiseLines: 2)
+    let episode = DiagnosticEpisode(title: "Notebook history", initial: fixture.initial, steps: Array(fixture.steps.prefix(2)))
+    let backend = NotebookBackend(loseNeedle: true, rawAnswers: [
+        "FACT amber=TQ-4819-X", "{\"facts\":{\"amber\":\"TQ-4819-X\",\"beryl\":\"M8:blue/42\"}}"
+    ])
+    let report = try await DiagnosticRunner(counter: DiagnosticCounter(), backend: backend).run(episode, mode: .editable, budget: budget, episodeTokenLimit: 120_000)
+    #expect(report.steps.count == 2)
+    #expect(report.steps[0].retainedCorrect == false)
+    #expect(report.steps[0].answerCorrect == false)
+    #expect(report.steps[1].retainedCorrect)
+    #expect(report.steps[1].answerCorrect)
+    #expect(!report.passed)
+    #expect(report.revised.records.contains { $0.role == .assistant && $0.body == "FACT amber=TQ-4819-X" })
 }
 
 @Test(arguments: ["Notes: FACT amber=TQ-4819-X; FACT beryl=M8:blue/42", "{\"facts\":{\"amber\":\"TQ-4819-X\",\"beryl\":\"M8:blue/42\"}}",

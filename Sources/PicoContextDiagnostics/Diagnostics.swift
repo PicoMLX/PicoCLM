@@ -79,8 +79,10 @@ public struct DiagnosticEpisode: Sendable {
             expected = [["rack": "A4", "units": "7"], ["rack": "A4", "units": "11", "owner": "Mina"],
                         ["units": "11", "owner": "Jo"], ["units": "3", "owner": "Jo"]]
         }
-        let steps = operations.indices.map { index in
+        let steps = try operations.indices.map { index in
             let id = "step-\(index + 1)"
+            let placeholders = Dictionary(uniqueKeysWithValues: expected[index].keys.map { ($0, "<value from notebook>") })
+            let shape = String(decoding: try JSONSerialization.data(withJSONObject: ["facts": placeholders], options: [.sortedKeys]), as: UTF8.self)
             let noise = (0..<noiseLines).map { line in
                 "Telemetry batch \(index + 1), tick \(line): probe ready; routing sample discarded; no notebook change."
             }
@@ -90,7 +92,7 @@ public struct DiagnosticEpisode: Sendable {
                 ]),
                 ContextRecord(id: "\(id)-data", role: .tool, body: (operations[index] + noise).joined(separator: "\n"), toolCallID: "\(id)-input"),
                 ContextRecord(id: "\(id)-request", role: .user,
-                              body: "Report the complete current notebook. Return only JSON with top-level key facts and these string-valued keys: \(expected[index].keys.sorted().joined(separator: ", ")). Quote every value, including numeric text. Fill values from notebook entries; omit removed keys. No FACT lines or record headers in the answer.",
+                              body: "Report the complete current notebook. Return only this JSON shape, replacing placeholders with exact values from the notebook: \(shape). The facts field must be an object, not a string. Quote every value, including numeric text. No FACT lines, record headers or Markdown in the answer.",
                               isProtected: true)
             ]
             return DiagnosticStep(id: id, records: records, answerRecordID: "\(id)-answer", expectedFacts: expected[index])

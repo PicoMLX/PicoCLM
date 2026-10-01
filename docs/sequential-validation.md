@@ -13,7 +13,7 @@ were not available for execution.
 
 ## Deterministic checks
 
-`swift test` passes **42 core tests** and **8 diagnostic tests (20 cases)** with
+`swift test` passes **42 core tests** and **9 diagnostic tests (21 cases)** with
 zero external package dependencies, model downloads or GPU inference. Optional
 MLX tests pass **6 tests (59 cases)** without loading weights. The diagnostic
 library and core cross-build for `arm64-apple-ios18.0` with the installed SDK.
@@ -61,7 +61,7 @@ all decision/recovery calls, excludes initial model loading, and varies with hos
 load and background execution. Baseline runs first, so warm-up/order effects remain.
 An earlier retention development run passed every context and answer check in both
 modes and exercised three edits plus an explicit keep decision; its prompt schema
-predated the final operation variants. Current-run evidence is recorded separately.
+predated the final operation variants. The recorded development requests are preserved in their raw transcripts; the current fixture additionally supplies an explicit JSON answer shape.
 
 ## Reproduce
 
