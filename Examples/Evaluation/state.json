@@ -3,12 +3,13 @@
   "seeds": [
     17
   ],
-  "repetitions": 2,
+  "repetitions": 3,
   "stepCount": 5,
   "noiseLines": 12,
   "policies": [
     "appendOnly",
-    "editable"
+    "editable",
+    "summarization"
   ],
   "limits": {
     "contextWindow": 4096,

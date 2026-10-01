@@ -120,3 +120,31 @@ private func unsupportedDeveloperInstructionsFailBeforeQwenCanDropThem(inControl
         }
     }
 }
+
+@Test private func summaryGuidanceIsDistinctAndDoesNotChangeToolPermissionsOrCompletion() throws {
+    let targeted = ModelInput(context: context(), phase: .edit)
+    let summary = ModelInput(context: context(), phase: .edit, editStyle: .summarize)
+    let targetedMessages = try MLXContextBackend.messages(for: targeted)
+    let summaryMessages = try MLXContextBackend.messages(for: summary)
+    #expect((targetedMessages.last?["content"] as? String)?.contains("newest verbose body") == true)
+    #expect((summaryMessages.last?["content"] as? String)?.contains("complete current state") == true)
+    #expect(summary.instructions.contains("whole-history summarization"))
+    #expect(targeted.instructions != summary.instructions)
+    #expect(try JSONSerialization.data(withJSONObject: MLXContextBackend.tools(for: targeted)!, options: [.sortedKeys])
+            == JSONSerialization.data(withJSONObject: MLXContextBackend.tools(for: summary)!, options: [.sortedKeys]))
+    let a = ModelInput(context: context(), phase: .completion)
+    let b = ModelInput(context: context(), phase: .completion, editStyle: .summarize)
+    #expect(a.instructions == b.instructions)
+    #expect(MLXContextBackend.tools(for: b) == nil)
+}
+
+@Test private func incomingUnprotectedUserBodiesCanBeContextTargets() throws {
+    let base = context()
+    let snapshot = ContextSnapshot(scope: scope, records: base.records + [
+        ContextRecord(id: "new-operation", role: .user, body: "Verbose incoming operation with exact value X-82.")
+    ])
+    let messages = try MLXContextBackend.messages(for: ModelInput(context: snapshot, phase: .edit))
+    let guidance = try #require(messages.last?["content"] as? String)
+    #expect(guidance.contains("Prefer record new-operation"))
+    #expect(guidance.contains("Editable record IDs: lookup, price, new-operation"))
+}

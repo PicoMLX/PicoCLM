@@ -2,8 +2,9 @@ import Foundation
 import PicoContext
 
 public enum EvaluationPolicy: String, CaseIterable, Codable, Sendable {
-    case appendOnly, editable
+    case appendOnly, editable, summarization
     var mode: RunMode { self == .appendOnly ? .appendOnly : .editable }
+    var editStyle: ContextEditStyle { self == .summarization ? .summarize : .targeted }
 }
 
 public struct EvaluationLimits: Codable, Sendable {
@@ -41,7 +42,7 @@ public struct EvaluationConfiguration: Codable, Sendable {
     public var policies: [EvaluationPolicy]
     public var limits: EvaluationLimits
 
-    public init(scenario: DiagnosticScenario = .retention, seeds: [UInt64] = [17, 29], repetitions: Int = 2,
+    public init(scenario: DiagnosticScenario = .retention, seeds: [UInt64] = [17, 29], repetitions: Int = 3,
                 stepCount: Int = 4, noiseLines: Int = 12,
                 policies: [EvaluationPolicy] = EvaluationPolicy.allCases, limits: EvaluationLimits = EvaluationLimits()) {
         self.scenario = scenario; self.seeds = seeds; self.repetitions = repetitions
@@ -78,12 +79,13 @@ public struct EvaluationProvenance: Codable, Sendable {
 
 public struct EvaluationCall: Codable, Sendable {
     public let phase: String
+    public let editStyle: ContextEditStyle
     public let context: ContextSnapshot
     public let controlRecords: [ContextRecord]
     public let tokenIDs: [Int]
     public let renderedPrompt: String
     init(_ prompt: PreparedPrompt) {
-        phase = prompt.input.phase.rawValue; context = prompt.input.context; controlRecords = prompt.input.controlRecords
+        phase = prompt.input.phase.rawValue; editStyle = prompt.input.editStyle; context = prompt.input.context; controlRecords = prompt.input.controlRecords
         tokenIDs = prompt.tokenIDs; renderedPrompt = prompt.renderedPrompt
     }
 }
@@ -202,7 +204,7 @@ public struct EvaluationRunner: Sendable {
                     try Task.checkCancellation()
                     let policy = configuration.policies[(start + index) % configuration.policies.count]
                     let report = try await runner.run(episode, mode: policy.mode, budget: configuration.limits.budget,
-                                                      episodeTokenLimit: configuration.limits.episodeTokens)
+                                                      episodeTokenLimit: configuration.limits.episodeTokens, editStyle: policy.editStyle)
                     let result = EvaluationResult(order: results.count, seed: seed, repetition: repetition, policy: policy,
                                                   plannedSteps: episode.steps.count, environmentPromptTokens: environmentTokens,
                                                   contextWindow: configuration.limits.contextWindow, report: report)
@@ -212,7 +214,7 @@ public struct EvaluationRunner: Sendable {
                 }
             }
         }
-        return EvaluationReport(schemaVersion: 1, createdAt: Date(), configuration: configuration,
+        return EvaluationReport(schemaVersion: 2, createdAt: Date(), configuration: configuration,
                                 provenance: provenance, results: results)
     }
 }

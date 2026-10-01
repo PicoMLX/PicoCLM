@@ -2,21 +2,32 @@ import Foundation
 
 public enum ModelPhase: String, Sendable { case edit, completion }
 
+/// Guidance for the native edit tool; both styles share the same validation/commit boundary.
+public enum ContextEditStyle: String, Codable, Sendable {
+    case targeted, summarize
+}
+
 public struct ModelInput: Sendable {
     public let context: ContextSnapshot
     public let phase: ModelPhase
+    public let editStyle: ContextEditStyle
     /// Runtime-owned control exchange, separate from editable history.
     public let controlRecords: [ContextRecord]
 
-    public init(context: ContextSnapshot, phase: ModelPhase, controlRecords: [ContextRecord] = []) {
+    public init(context: ContextSnapshot, phase: ModelPhase, controlRecords: [ContextRecord] = [],
+                editStyle: ContextEditStyle = .targeted) {
         self.context = context
         self.phase = phase
+        self.editStyle = editStyle
         self.controlRecords = controlRecords
     }
 
     public var instructions: String {
         switch phase {
-        case .edit: ContextEditTool.instructions + "\nCurrent baseRevision: \(context.revision)."
+        case .edit:
+            ContextEditTool.instructions
+                + (editStyle == .summarize ? "\n" + ContextEditTool.summarizationInstructions : "")
+                + "\nCurrent baseRevision: \(context.revision)."
         case .completion: "Respond to the latest caller-owned user request using the current working history. Follow the protected instructions and initial task. Context editing is finished."
         }
     }

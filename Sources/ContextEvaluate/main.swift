@@ -21,7 +21,7 @@ struct ContextEvaluate {
             print("""
             ContextEvaluate [--backend deterministic|mlx] [--config path.json] [--output path.json]
               --model-directory path  Required for MLX; uses local files only, never downloads.
-            Config defaults: two seeds, four steps, 12 noise lines, two counterbalanced repetitions.
+            Config defaults: two seeds, four steps, 12 noise lines, three counterbalanced repetitions.
             Deterministic defaults use a byte counter and larger byte allowances, not model tokens.
             Exit codes: 0 all episodes passed; 2 graded/budget failures (JSON preserved); 1 invalid setup.
             """)

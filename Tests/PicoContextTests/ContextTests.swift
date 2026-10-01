@@ -54,11 +54,13 @@ private actor DeterministicBackend: ContextModelBackend {
     }
 }
 
-@Test func completeLoopUsesExactRevisedInput() async throws {
+@Test(arguments: [ContextEditStyle.targeted, .summarize])
+func completeLoopUsesExactRevisedInput(editStyle: ContextEditStyle) async throws {
     let backend = DeterministicBackend()
     let store = InMemoryContextPersistence()
     let session = try ContextSession(context: fixture(), counter: ByteCounter(), backend: backend, persistence: store)
-    let report = try await session.run(budget: testBudget)
+    let report = try await session.run(budget: testBudget, editStyle: editStyle)
+    #expect(report.editStyle == editStyle)
     #expect(report.failure == nil)
     #expect(report.revised.revision == 1)
     #expect(report.original == fixture())
@@ -69,6 +71,7 @@ private actor DeterministicBackend: ContextModelBackend {
     #expect(prompts.count == 2)
     let final = try #require(prompts.last)
     #expect(final.input.context == report.revised)
+    #expect(final.input.editStyle == editStyle)
     #expect(final.tokenIDs == report.finalPrompt?.tokenIDs)
     #expect(!final.renderedPrompt.contains("Scan 1:"))
     #expect(!final.renderedPrompt.contains("SUPERSEDED"))
@@ -541,4 +544,24 @@ private struct CancelledBackend: ContextModelBackend {
     await store.save(first.snapshot)
     #expect(await store.load(scope: other) == otherSnapshot)
     #expect(await store.load(scope: scope)?.revision == 1)
+}
+
+@Test(arguments: ["task", "old-result"])
+func summaryPolicyCannotBypassProtectionOrToolGroupValidation(recordID: String) async throws {
+    let bad = "{\"baseRevision\":0,\"operations\":[{\"action\":\"delete\",\"recordID\":\"\(recordID)\"}]}"
+    let backend = DeterministicBackend(edits: [
+        ModelResponse(toolCalls: [ModelToolCall(arguments: bad)], generatedTokens: 16),
+        ModelResponse(toolCalls: [ModelToolCall(name: ContextKeepTool.name, arguments: "{\"baseRevision\":0}")], generatedTokens: 4)
+    ])
+    let store = InMemoryContextPersistence()
+    let session = try ContextSession(context: fixture(), counter: ByteCounter(), backend: backend, persistence: store)
+    let report = try await session.run(budget: testBudget, editStyle: .summarize)
+    #expect(report.failure == nil)
+    #expect(report.attempts.map(\.outcome) == [.rejected, .kept])
+    #expect(report.revised == fixture())
+    #expect(report.original == fixture())
+    #expect(await store.load(scope: scope) == nil)
+    #expect(report.calls.count == 3)
+    #expect(report.calls.allSatisfy { $0.input.editStyle == .summarize })
+    #expect(report.totalGeneratedTokens == 40)
 }

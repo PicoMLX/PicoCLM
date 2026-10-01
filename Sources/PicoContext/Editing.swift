@@ -36,6 +36,17 @@ public enum ContextEditTool {
     recordID, and body for replace. Do not include scope, roles or new records. Do not answer yet.
     """
 
+    /// Original whole-history summary guidance using caller-owned records, never new identities.
+    public static let summarizationInstructions = """
+    Use a whole-history summarization policy for this decision.
+    Review all unprotected history and consolidate the task-relevant current state into concise notes.
+    Put the summary in an existing unprotected record body, preserving exact required values.
+    Remove superseded information in the same atomic edit, using body replacements or complete group deletions.
+    Keep effective removals and update order; do not resurrect stale facts from earlier history.
+    Preserve protected records, roles, IDs and tool relationships. Do not create a summary record.
+    If no useful legal summary is possible, call keep_context. Do not answer during this phase.
+    """
+
     public static func decode(arguments: String, scope: ContextScope) throws -> ContextEdit {
         guard arguments.utf8.count <= 128_000,
               let data = arguments.data(using: .utf8),

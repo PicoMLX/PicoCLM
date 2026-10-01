@@ -32,6 +32,7 @@ public struct EditAttempt: Sendable {
 
 public struct RunReport: Sendable {
     public let mode: RunMode
+    public let editStyle: ContextEditStyle
     /// The preserved caller transcript through the latest append, before any body edits.
     public let original: ContextSnapshot
     /// The working revision at the start of this run, including earlier committed edits.
@@ -108,7 +109,8 @@ public actor ContextSession {
     }
 
     /// Failures return a report with partial usage and the last valid revision; cancellation propagates.
-    public func run(mode: RunMode = .editable, budget: RunBudget = RunBudget()) async throws -> RunReport {
+    public func run(mode: RunMode = .editable, budget: RunBudget = RunBudget(),
+                    editStyle: ContextEditStyle = .targeted) async throws -> RunReport {
         guard !busy else { throw ContextError.busy }
         busy = true
         defer { busy = false }
@@ -148,10 +150,10 @@ public actor ContextSession {
                   budget.contextWindow <= 1_000_000, budget.totalTokens <= 10_000_000 else {
                 throw ContextError.invalid("invalid run budget; edit attempts must be 1...4")
             }
-            runStartTokens = try await counter.prepare(ModelInput(context: runStart, phase: .completion)).tokenCount
+            runStartTokens = try await counter.prepare(ModelInput(context: runStart, phase: .completion, editStyle: editStyle)).tokenCount
             if runStart == original { beforeTokens = runStartTokens }
             else {
-                do { beforeTokens = try await counter.prepare(ModelInput(context: original, phase: .completion)).tokenCount }
+                do { beforeTokens = try await counter.prepare(ModelInput(context: original, phase: .completion, editStyle: editStyle)).tokenCount }
                 catch is CancellationError { throw CancellationError() }
                 catch { beforeFailure = error.localizedDescription }
             }
@@ -159,7 +161,7 @@ public actor ContextSession {
                 var accepted = false
                 for attempt in 0..<budget.maxEditAttempts {
                     try Task.checkCancellation()
-                    let prompt = try await counter.prepare(ModelInput(context: working.snapshot, phase: .edit, controlRecords: control))
+                    let prompt = try await counter.prepare(ModelInput(context: working.snapshot, phase: .edit, controlRecords: control, editStyle: editStyle))
                     try checkBudget(prompt, output: budget.editOutputTokens, reserve: budget.completionOutputTokens)
                     calls.append(prompt)
                     let response = try await backend.generate(prompt, maxTokens: budget.editOutputTokens)
@@ -199,7 +201,7 @@ public actor ContextSession {
                         candidate = validated
                         receipt = Self.receipt(attempt: attempt, calls: response.toolCalls, text: detail,
                                                reserving: reservedRecords)
-                        next = try await counter.prepare(ModelInput(context: candidate.snapshot, phase: .completion, controlRecords: receipt))
+                        next = try await counter.prepare(ModelInput(context: candidate.snapshot, phase: .completion, controlRecords: receipt, editStyle: editStyle))
                         try checkBudget(next, output: budget.completionOutputTokens)
                     } catch is CancellationError { throw CancellationError() }
                     catch {
@@ -232,7 +234,7 @@ public actor ContextSession {
             try Task.checkCancellation()
             let prepared: PreparedPrompt
             if let finalPrompt { prepared = finalPrompt }
-            else { prepared = try await counter.prepare(ModelInput(context: working.snapshot, phase: .completion)) }
+            else { prepared = try await counter.prepare(ModelInput(context: working.snapshot, phase: .completion, editStyle: editStyle)) }
             try checkBudget(prepared, output: budget.completionOutputTokens)
             finalPrompt = prepared
             calls.append(prepared)
@@ -248,7 +250,7 @@ public actor ContextSession {
         } catch is CancellationError { throw CancellationError() }
         catch { failure = error.localizedDescription }
 
-        return RunReport(mode: mode, original: original, runStart: runStart, revised: working.snapshot,
+        return RunReport(mode: mode, editStyle: editStyle, original: original, runStart: runStart, revised: working.snapshot,
                          originalPromptTokens: beforeTokens, originalPromptFailure: beforeFailure, runStartPromptTokens: runStartTokens,
                          finalPrompt: finalPrompt, calls: calls,
                          attempts: attempts, answer: answer, failure: failure,

@@ -56,3 +56,8 @@ The seeded evaluation streams, deterministic notebook backend, JSON trace format
 and runner prompts are original project contributions. SplitMix64 arithmetic is
 used to identify reproducible synthetic task instances; seeds do not change
 greedy model sampling. The runner uses the existing pinned model adapter only.
+
+The whole-history summarization guidance is written here. It shares the native
+body-edit tool and protection/scope constraints with targeted editing. The
+comparison does not reuse Meta's summarization code or skill prompts, and its
+constraints differ from the paper's unrestricted file-based methods.

@@ -56,7 +56,7 @@ public struct DiagnosticEpisode: Sendable {
             A line of the form REMOVE key deletes that key. Telemetry is irrelevant.
             During context editing, preserve the complete current notebook as separate exact FACT key=value lines.
             Keep each FACT or REMOVE operation on its own line. Never join operations with semicolons.
-            When shortening a tool result, copy its operation lines exactly and remove only telemetry.
+            Working notes must retain exact current values. Preserve update and deletion order, or consolidate current state and remove superseded operations together.
             Keep deletions effective; do not let an older assignment resurrect a removed key.
             During the context decision phase, call one of the offered context tools instead of answering.
             During the completion phase, answer the latest user request with only a JSON object containing facts, a dictionary of string values.
@@ -230,7 +230,7 @@ public struct DiagnosticRunner: Sendable {
     }
 
     public func run(_ episode: DiagnosticEpisode, mode: RunMode, budget: RunBudget = RunBudget(),
-                    episodeTokenLimit: Int = 80_000,
+                    episodeTokenLimit: Int = 80_000, editStyle: ContextEditStyle = .targeted,
                     onStep: @Sendable (DiagnosticStepReport) async -> Void = { _ in }) async throws -> DiagnosticReport {
         guard (1...32).contains(episode.steps.count),
               Set(episode.steps.map(\.id)).count == episode.steps.count,
@@ -252,7 +252,7 @@ public struct DiagnosticRunner: Sendable {
                 let stepBudget = RunBudget(contextWindow: budget.contextWindow, totalTokens: min(budget.totalTokens, episodeTokenLimit - used),
                                            editOutputTokens: budget.editOutputTokens, completionOutputTokens: budget.completionOutputTokens,
                                            maxEditAttempts: budget.maxEditAttempts)
-                let result = try await session.run(mode: mode, budget: stepBudget)
+                let result = try await session.run(mode: mode, budget: stepBudget, editStyle: editStyle)
                 run = result
                 used += result.totalInputTokens + result.totalGeneratedTokens
                 retained = DiagnosticGrading.retainedFacts(in: result.revised, expected: step.expectedFacts, check: episode.contextCheck)

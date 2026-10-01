@@ -16,16 +16,16 @@ especially [Section 4.1](https://arxiv.org/html/2609.37725v1#S4.SS1) and
 | Diagnostics | Four ContextBench tasks | Original four-turn retention and notebook updates, exact live-context and answer checks | Seeded instances, pressure sweeps, official integration when released |
 | Measurement | Context pressure and trajectory prefix-reuse FLOPs | All dispatched input/output, edits, retries and elapsed time; fresh KV state | Batch exports, balanced order, summarization, memory measurements; tokens/time are not FLOPs |
 
-## Next stack
+## Current stack and next work
 
 1. Validate merged main, correct stale status documents and preserve current model failures.
    Dependency-free and optional prompt tests pass locally on October 1. Minimum
    compiler/runtime execution and Xcode Cloud results remain unverified locally.
-2. Add a reusable evaluation runner outside the core: original seeded streams,
+2. Implemented in the current stack: a reusable evaluation runner outside the core, with original seeded streams,
    bounded episode length/noise, matched budgets, balanced policy order and JSON
    reports with configuration, provenance, exact prompts, contexts and per-step
    correctness. Reuse the one cached model and build directory.
-3. Add a constrained summarization baseline with the same stream, model, protection,
+3. Implemented in the current stack: a constrained summarization baseline with the same stream, model, protection,
    scope, context window and token allowances. Charge every summary/recovery call.
    Describe its native-tool limitations; do not call it the paper's implementation.
 4. Improve prompt reliability using development instances and untouched held-out

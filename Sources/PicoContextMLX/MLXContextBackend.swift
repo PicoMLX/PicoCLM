@@ -71,18 +71,33 @@ public actor MLXContextBackend: TokenCounting, ContextModelBackend {
             messages.append(message)
         }
         if input.phase == .edit {
-            let editableResults = input.context.records.filter { $0.role == .tool && !$0.isProtected }.map(\.id).joined(separator: ", ")
-            let newestResult = input.context.records.last { $0.role == .tool && !$0.isProtected }?.id ?? "none"
+            let editable = input.context.records.filter { !$0.isProtected }
+            let ids = editable.map(\.id).joined(separator: ", ")
+            let destination = editable.last { !$0.body.isEmpty && $0.toolCalls.isEmpty }?.id ?? editable.last?.id ?? "none"
+            let guidance: String
+            switch input.editStyle {
+            case .targeted:
+                guidance = """
+                Shorten the newest verbose body into factual notes, preserving exact required facts.
+                Prefer record \(destination) if it contains verbose noise. Leave earlier concise notes unchanged.
+                A simple change needs one replacement. Copy effective operation lines with their exact values.
+                """
+            case .summarize:
+                guidance = """
+                Summarize all task-relevant unprotected history into the complete current state.
+                Suggested existing destination: \(destination). Include exact current values from earlier records.
+                In the same edit, clear or delete superseded bodies so stale assignments cannot override the summary.
+                Preserve effective removals. This policy consolidates history rather than only shortening the newest result.
+                """
+            }
             messages.append(["role": "user", "content": """
             This turn is the context decision phase. Choose exactly one tool before giving an answer.
-            Use replace to shorten verbose tool results into factual notes that preserve the requested facts.
-            Call keep_context with only baseRevision if the current context already needs no change.
-            Editable tool-result record IDs: \(editableResults). Target these IDs; never target instructions or task.
-            Newest editable tool-result ID: \(newestResult). Start with this result if it contains verbose noise.
-            Leave earlier concise factual notes unchanged. Never replace a body with identical text.
-            A simple change needs just one replacement operation. Keep all exact facts from that result.
-            Each replacement must use these exact keys: action, recordID, body. Put the shorter text in body.
-            Use baseRevision \(input.context.revision). Do not change protected instructions or the task.
+            \(guidance)
+            Editable record IDs: \(ids). Never target protected instructions or task.
+            Each replacement uses action, recordID, body. Never replace a body with identical text.
+            Delete complete assistant/tool groups together. Do not create records or change metadata.
+            Call keep_context with only baseRevision if no useful legal change is needed.
+            Use baseRevision \(input.context.revision).
             Return the function call inside <tool_call> and </tool_call>, with name and arguments fields.
             """])
         } else {
