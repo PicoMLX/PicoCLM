@@ -144,7 +144,10 @@ public actor ContextSession {
                     editCalls += response.toolCalls.count
                     let arguments = response.toolCalls.map(\.arguments).joined(separator: "\n")
                     let reservedRecords = original.records + working.snapshot.records + control
-                    var detail: String
+                    let candidate: WorkingContext
+                    let detail: String
+                    let receipt: [ContextRecord]
+                    let next: PreparedPrompt
                     do {
                         guard !response.reachedTokenLimit else { throw ContextError.budgetExceeded("edit generation hit its output limit") }
                         guard response.toolCalls.count == 1 else {
@@ -153,29 +156,37 @@ public actor ContextSession {
                         let call = response.toolCalls[0]
                         guard call.name == ContextEditTool.name else { throw ContextError.invalid("unknown context tool") }
                         let edit = try ContextEditTool.decode(arguments: call.arguments, scope: working.snapshot.scope)
-                        var candidate = working
-                        try candidate.apply(edit)
+                        var validated = working
+                        try validated.apply(edit)
+                        candidate = validated
                         detail = "Accepted revision \(candidate.snapshot.revision). Complete the initial task now."
-                        let receipt = Self.receipt(attempt: attempt, calls: response.toolCalls, text: detail,
-                                                   reserving: reservedRecords)
-                        let next = try await counter.prepare(ModelInput(context: candidate.snapshot, phase: .completion, controlRecords: receipt))
+                        receipt = Self.receipt(attempt: attempt, calls: response.toolCalls, text: detail,
+                                               reserving: reservedRecords)
+                        next = try await counter.prepare(ModelInput(context: candidate.snapshot, phase: .completion, controlRecords: receipt))
                         try checkBudget(next, output: budget.completionOutputTokens)
-                        try Task.checkCancellation()
-                        try await persistence?.save(candidate.snapshot)
-                        working = candidate
-                        control = receipt
-                        finalPrompt = next
-                        attempts.append(EditAttempt(arguments: arguments, modelText: response.text, accepted: true, detail: detail))
-                        accepted = true
                     } catch is CancellationError { throw CancellationError() }
                     catch {
-                        detail = error.localizedDescription
+                        let detail = error.localizedDescription
                         attempts.append(EditAttempt(arguments: arguments, modelText: response.text, accepted: false, detail: detail))
                         control = Self.receipt(attempt: attempt, calls: response.toolCalls,
                                                text: "Rejected: \(detail) Retry against revision \(working.snapshot.revision).",
                                                reserving: reservedRecords)
+                        continue
                     }
-                    if accepted { break }
+                    // Storage errors are runtime failures, not defects the model can repair.
+                    try Task.checkCancellation()
+                    do { try await persistence?.save(candidate.snapshot) }
+                    catch {
+                        attempts.append(EditAttempt(arguments: arguments, modelText: response.text, accepted: false,
+                                                    detail: "Commit failed: \(error.localizedDescription)"))
+                        throw error
+                    }
+                    working = candidate
+                    control = receipt
+                    finalPrompt = next
+                    attempts.append(EditAttempt(arguments: arguments, modelText: response.text, accepted: true, detail: detail))
+                    accepted = true
+                    break
                 }
                 guard accepted else { throw ContextError.editLimit }
             }

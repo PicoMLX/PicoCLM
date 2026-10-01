@@ -9,9 +9,11 @@ runtime/compiler combinations are not claimed as tested.
 ## Checks performed
 
 - Default manifest: zero dependencies; only `PicoContext` and `PicoContextTests`.
-- Core build and **25 Swift Testing tests passed**, including parameterized cases.
+- Core build and **26 Swift Testing tests passed**, including parameterized cases.
   Review regression coverage includes caller edits/repeated runs and runtime receipt
   collisions with retained and deleted caller IDs, including retry/acceptance feedback.
+  Persistence failures retain the current revision, report the storage error and
+  stop without requesting another model edit.
 - **4 opt-in MLX adapter tests passed** (20 cases across parameterized tests), without
   loading weights or running inference. They reject Qwen delimiters in message text,
   record IDs, tool IDs/names and control metadata; safe metadata preserves roles/links

@@ -304,6 +304,30 @@ private struct FailingStore: ContextPersistence {
     #expect(await session.context == fixture())
 }
 
+@Test func modelEditPersistenceFailureReportsStorageErrorWithoutRetry() async throws {
+    let proposal = ModelResponse(toolCalls: [ModelToolCall(arguments: validArguments)], generatedTokens: 32)
+    let backend = DeterministicBackend(edits: [proposal, proposal])
+    let session = try ContextSession(context: fixture(), counter: ByteCounter(), backend: backend, persistence: FailingStore())
+    let report = try await session.run(budget: testBudget)
+    #expect(report.failure == ContextError.invalid("storage failed").localizedDescription)
+    #expect(await session.context == fixture())
+    #expect(report.revised == fixture())
+    #expect(report.finalPrompt == nil)
+    #expect(report.answer.isEmpty)
+    let prompts = await backend.prompts
+    #expect(prompts.count == 1)
+    #expect(prompts.map(\.input.phase) == [.edit])
+    #expect(report.totalInputTokens == prompts.reduce(0) { $0 + $1.tokenCount })
+    #expect(report.totalGeneratedTokens == 32)
+    #expect(report.attempts.count == 1)
+    #expect(report.attempts.first?.accepted == false)
+    #expect(report.attempts.first?.detail.contains("storage failed") == true)
+    // The operation released its busy flag even though commit failed.
+    await #expect(throws: ContextError.invalid("storage failed")) {
+        try await session.apply(ContextEditTool.decode(arguments: validArguments, scope: scope))
+    }
+}
+
 @Test func invalidHistoryCannotStartSession() throws {
     let malformed = ContextSnapshot(scope: scope, records: [
         ContextRecord(id: "task", role: .user, body: "task", isProtected: true),
