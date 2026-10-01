@@ -41,6 +41,9 @@ public actor MLXContextBackend: TokenCounting, ContextModelBackend {
         try WorkingContext.validate(input.context)
         var messages: [Message] = [["role": "system", "content": input.instructions]]
         for record in input.context.records + input.controlRecords {
+            guard record.role != .developer else {
+                throw ContextError.invalid("the pinned Qwen template does not support the developer role")
+            }
             let fields = [record.body, record.id] + [record.toolCallID].compactMap { $0 }
                 + record.toolCalls.flatMap { [$0.id, $0.name] }
             guard !fields.contains(where: { field in

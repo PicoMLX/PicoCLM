@@ -120,6 +120,8 @@ replacement/deletion operations by stable record ID. It cannot supply scope,
 IDs, roles, protection or tool-link metadata. The caller supplies an opaque
 `ContextScope(userID:conversationID:branchID:)`; cross-scope and stale edits fail.
 System/developer records and the initial user task are protected.
+The pinned Qwen adapter rejects developer records because its template cannot
+render that role; the Foundation-only core retains support for backends that can.
 
 `ContextSession.originalContext` and `RunReport.original` expose the preserved
 session transcript; the report's `diff` includes earlier committed edits.
