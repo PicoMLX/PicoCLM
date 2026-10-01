@@ -92,3 +92,15 @@ private func toolArgumentsEscapeDelimitersWithoutChangingTheirJSONValue(delimite
         #expect(action["enum"] as? [String] == [index == 0 ? "replace" : "delete"])
     }
 }
+
+@Test(arguments: [false, true])
+private func unsupportedDeveloperInstructionsFailBeforeQwenCanDropThem(inControl: Bool) throws {
+    let developer = ContextRecord(id: "developer", role: .developer, body: "Always preserve these protected instructions.")
+    let snapshot = ContextSnapshot(scope: scope, records: context().records + (inControl ? [] : [developer]))
+    try WorkingContext.validate(snapshot)
+    for phase in [ModelPhase.edit, .completion] {
+        #expect(throws: ContextError.invalid("the pinned Qwen template does not support the developer role")) {
+            try MLXContextBackend.messages(for: ModelInput(context: snapshot, phase: phase, controlRecords: inControl ? [developer] : []))
+        }
+    }
+}
