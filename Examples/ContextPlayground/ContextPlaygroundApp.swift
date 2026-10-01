@@ -3,6 +3,7 @@ import Foundation
 import Observation
 import PicoContext
 import PicoContextMLX
+import PicoContextDiagnostics
 import SwiftUI
 
 @main
@@ -15,6 +16,13 @@ struct ContextPlaygroundApp: App {
                 .frame(minWidth: 1_000, minHeight: 700)
                 .task {
                     if ProcessInfo.processInfo.arguments.contains("--smoke") {
+                        model.task = .lamp
+                        await model.runComparison()
+                        model.writeSmokeReport()
+                    } else if ProcessInfo.processInfo.arguments.contains("--episode-smoke") {
+                        let arguments = ProcessInfo.processInfo.arguments
+                        model.task = arguments.contains("stateUpdates") ? .stateUpdates : .retention
+                        model.pressure = arguments.contains("--pressure")
                         await model.runComparison()
                         model.writeSmokeReport()
                     }
@@ -24,11 +32,33 @@ struct ContextPlaygroundApp: App {
     }
 }
 
+enum PlaygroundTask: String, CaseIterable {
+    case lamp, retention, stateUpdates
+    var title: String {
+        switch self {
+        case .lamp: "Lamp order"
+        case .retention: "Exact retention"
+        case .stateUpdates: "State updates"
+        }
+    }
+    var scenario: DiagnosticScenario? {
+        switch self {
+        case .lamp: nil
+        case .retention: .retention
+        case .stateUpdates: .stateUpdates
+        }
+    }
+}
+
 @Observable @MainActor
 final class PlaygroundModel {
     let scope = ContextScope(userID: "playground-user", conversationID: "lamp-order", branchID: "main")
     var baseline: RunReport?
     var editable: RunReport?
+    var baselineEpisode: DiagnosticReport?
+    var editableEpisode: DiagnosticReport?
+    var task: PlaygroundTask = .retention
+    var pressure = false
     var status = "Ready. The first run downloads a 1 GB local model."
     var running = false
     var progress = 0.0
@@ -41,6 +71,8 @@ final class PlaygroundModel {
         running = true
         baseline = nil
         editable = nil
+        baselineEpisode = nil
+        editableEpisode = nil
         defer { running = false }
         do {
             if backend == nil {
@@ -51,6 +83,22 @@ final class PlaygroundModel {
                 }
             }
             guard let backend else { return }
+            if let scenario = task.scenario {
+                let episodeScope = ContextScope(userID: scope.userID, conversationID: scenario.rawValue, branchID: scope.branchID)
+                let episode = try DiagnosticEpisode.fixture(scenario, scope: episodeScope, noiseLines: pressure ? 48 : 12)
+                let runner = DiagnosticRunner(counter: backend, backend: backend)
+                let budget = RunBudget(contextWindow: 4_096, maxEditAttempts: 4)
+                status = "Running four sequential updates with append-only context…"
+                baselineEpisode = try await runner.run(episode, mode: .appendOnly, budget: budget) { [weak self] step in
+                    await self?.showProgress(step, policy: "Append-only")
+                }
+                status = "Running the same updates with editable context and exact state checks…"
+                editableEpisode = try await runner.run(episode, mode: .editable, budget: budget) { [weak self] step in
+                    await self?.showProgress(step, policy: "Editable")
+                }
+                status = editableEpisode?.failure ?? "Finished. Compare retained context and structured answers at every step."
+                return
+            }
             status = "Running append-only baseline…"
             let appendOnly = try ContextSession(context: fixture, counter: backend, backend: backend)
             baseline = try await appendOnly.run(mode: .appendOnly)
@@ -61,7 +109,47 @@ final class PlaygroundModel {
         } catch { status = error.localizedDescription }
     }
 
+    private func showProgress(_ step: DiagnosticStepReport, policy: String) {
+        status = "\(policy) · \(step.step.id): context \(step.retainedCorrect ? "passed" : "failed"), answer \(step.answerCorrect ? "passed" : "failed")"
+        print(status)
+    }
+
+    func clearResultsIfIdle() {
+        guard !running else { return }
+        baseline = nil
+        editable = nil
+        baselineEpisode = nil
+        editableEpisode = nil
+        status = "Ready for \(task.title)."
+    }
+
     func writeSmokeReport() {
+        if let baselineEpisode, let editableEpisode {
+            let text = "Model: \(MLXContextBackend.modelID)\n\(status)\n\n"
+                + DiagnosticResultsView.summary(baselineEpisode) + "\n\n" + DiagnosticResultsView.summary(editableEpisode)
+                + "\n\n" + [baselineEpisode, editableEpisode].map { report in
+                    "MODE: \(report.mode.rawValue)\n" + report.steps.map { step in
+                    "\(step.step.id)\nExpected: \(step.step.expectedFacts)\nRetained: \(step.retainedFacts)\nAnswer: \(step.run?.answer ?? "")\n"
+                    + "Attempts: \(step.run?.attempts.map { $0.detail + "\nMODEL OUTPUT\n" + $0.modelText + "\nARGUMENTS\n" + $0.arguments }.joined(separator: "\n") ?? "")\n"
+                    + "EXACT NEXT INPUT\n\(step.run?.finalPrompt?.renderedPrompt ?? "No completion call")"
+                    }.joined(separator: "\n\n")
+                }.joined(separator: "\n\n")
+            if let path = ProcessInfo.processInfo.environment["PICO_CONTEXT_SMOKE_REPORT"] {
+                do { try text.write(toFile: path, atomically: true, encoding: .utf8) }
+                catch { status = error.localizedDescription }
+            }
+            if let path = ProcessInfo.processInfo.environment["PICO_CONTEXT_SMOKE_IMAGE"] {
+                let renderer = ImageRenderer(content: DiagnosticSnapshotView(baseline: baselineEpisode, editable: editableEpisode))
+                renderer.scale = 2
+                if let tiff = renderer.nsImage?.tiffRepresentation,
+                   let png = NSBitmapImageRep(data: tiff)?.representation(using: .png, properties: [:]) {
+                    do { try png.write(to: URL(fileURLWithPath: path), options: .atomic) }
+                    catch { status = error.localizedDescription }
+                }
+            }
+            print(text)
+            return
+        }
         let text = ["Model: \(MLXContextBackend.modelID)", status,
                     baseline.map { Self.summary($0) } ?? "No baseline",
                     editable.map { Self.summary($0) } ?? "No editable run",
@@ -160,8 +248,21 @@ struct PlaygroundView: View {
                 }
                 Text("Live MLX · \(MLXContextBackend.modelID) · greedy sampling · fresh prompt evaluation")
                     .font(.caption).foregroundStyle(.secondary)
+                HStack {
+                    Picker("Task", selection: $model.task) {
+                        ForEach(PlaygroundTask.allCases, id: \.self) { task in Text(task.title).tag(task) }
+                    }.pickerStyle(.segmented)
+                    if model.task != .lamp { Toggle("Context pressure", isOn: $model.pressure) }
+                }.disabled(model.running)
+                    .onChange(of: model.task) { model.clearResultsIfIdle() }
+                    .onChange(of: model.pressure) { model.clearResultsIfIdle() }
                 if model.running { ProgressView(value: model.progress) }
                 Text(model.status).textSelection(.enabled)
+                if model.task != .lamp {
+                    Text("Four incoming updates in one conversation. Original fixtures; not official ContextBench scores.")
+                        .font(.caption).foregroundStyle(.secondary)
+                    DiagnosticResultsView(baseline: model.baselineEpisode, editable: model.editableEpisode)
+                } else {
                 HStack(alignment: .top, spacing: 18) {
                     if let baseline = model.baseline { ResultCard(report: baseline, title: "Append-only") }
                     if let editable = model.editable { ResultCard(report: editable, title: "Editable context") }
@@ -178,6 +279,7 @@ struct PlaygroundView: View {
                     DisclosureGroup("Exact next input · \(report.finalPrompt?.tokenCount ?? 0) tokens", isExpanded: .constant(true)) {
                         MonospacedText(text: report.finalPrompt?.renderedPrompt ?? "No completion call made.")
                     }
+                }
                 }
             }.padding(24)
         }
@@ -201,7 +303,7 @@ private struct ResultCard: View {
     }
 }
 
-private struct ContextPane: View {
+struct ContextPane: View {
     let title: String
     let context: ContextSnapshot
     var body: some View {
@@ -220,7 +322,7 @@ private struct ContextPane: View {
     }
 }
 
-private struct MonospacedText: View {
+struct MonospacedText: View {
     let text: String
     var body: some View {
         Text(text).font(.system(.caption, design: .monospaced))

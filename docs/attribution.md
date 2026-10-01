@@ -36,3 +36,17 @@ The research paper's benchmark numbers are not measurements of this package.
 
 The exact prompt protocol and validation policy are prototype design choices.
 They are not a claim of benchmark equivalence to Meta's implementation.
+
+## Sequential diagnostics and ContextBench
+
+The paper's streamed context-management evaluation and its retention/state tasks
+inspired the two original notebook diagnostics in `PicoContextDiagnostics`.
+Their keys, values, telemetry, prompts, update sequences and strict graders were
+written here. They are not copied task instances or official ContextBench scores.
+The new runtime permits explicit no-edit decisions and caller-owned output appends;
+its constrained body tools continue to differ from unrestricted file editing.
+
+As checked September 30, 2026, Meta's repository lists ContextBench as coming soon.
+The [evaluation plan](evaluation-plan.md) records a separate milestone to pin the
+official release and verify generator/data/evaluator licensing and protocol before
+integration. No unrelated project sharing the ContextBench name is substituted.

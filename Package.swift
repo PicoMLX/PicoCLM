@@ -3,11 +3,16 @@ import PackageDescription
 
 // Opt in at manifest evaluation time so the core builds without resolving MLX.
 let enableMLX = Context.environment["PICO_CONTEXT_ENABLE_MLX"] == "1"
-var products: [Product] = [.library(name: "PicoContext", targets: ["PicoContext"])]
+var products: [Product] = [
+    .library(name: "PicoContext", targets: ["PicoContext"]),
+    .library(name: "PicoContextDiagnostics", targets: ["PicoContextDiagnostics"]),
+]
 var dependencies: [Package.Dependency] = []
 var targets: [Target] = [
     .target(name: "PicoContext"),
     .testTarget(name: "PicoContextTests", dependencies: ["PicoContext"]),
+    .target(name: "PicoContextDiagnostics", dependencies: ["PicoContext"]),
+    .testTarget(name: "PicoContextDiagnosticsTests", dependencies: ["PicoContext", "PicoContextDiagnostics"]),
 ]
 if enableMLX {
     products.append(.library(name: "PicoContextMLX", targets: ["PicoContextMLX"]))
@@ -21,7 +26,7 @@ if enableMLX {
         .product(name: "MLX", package: "mlx-swift"),
     ]))
     targets.append(.executableTarget(name: "ContextPlayground", dependencies: [
-        "PicoContext", "PicoContextMLX",
+        "PicoContext", "PicoContextMLX", "PicoContextDiagnostics",
     ], path: "Examples/ContextPlayground"))
     targets.append(.testTarget(name: "PicoContextMLXTests", dependencies: ["PicoContext", "PicoContextMLX"]))
 }

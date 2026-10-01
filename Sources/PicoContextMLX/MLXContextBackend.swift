@@ -72,14 +72,24 @@ public actor MLXContextBackend: TokenCounting, ContextModelBackend {
         }
         if input.phase == .edit {
             let editableResults = input.context.records.filter { $0.role == .tool && !$0.isProtected }.map(\.id).joined(separator: ", ")
+            let newestResult = input.context.records.last { $0.role == .tool && !$0.isProtected }?.id ?? "none"
             messages.append(["role": "user", "content": """
             This turn is the context decision phase. Choose exactly one tool before giving an answer.
             Use replace to shorten verbose tool results into factual notes that preserve the requested facts.
             Call keep_context with only baseRevision if the current context already needs no change.
             Editable tool-result record IDs: \(editableResults). Target these IDs; never target instructions or task.
+            Newest editable tool-result ID: \(newestResult). Start with this result if it contains verbose noise.
+            Leave earlier concise factual notes unchanged. Never replace a body with identical text.
+            A simple change needs just one replacement operation. Keep all exact facts from that result.
             Each replacement must use these exact keys: action, recordID, body. Put the shorter text in body.
             Use baseRevision \(input.context.revision). Do not change protected instructions or the task.
             Return the function call inside <tool_call> and </tool_call>, with name and arguments fields.
+            """])
+        } else {
+            messages.append(["role": "user", "content": """
+            The context decision is finished. Answer the latest caller user request in the working history now.
+            Follow its requested output format exactly. Do not echo record headers or tool acknowledgements.
+            Context tools are disabled. Return the answer only.
             """])
         }
         return messages

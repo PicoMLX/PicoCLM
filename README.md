@@ -2,7 +2,7 @@
 
 A standalone Swift package that lets a model edit the working history it receives
 on its next call. The macOS SwiftUI example compares append-only and editable
-context on an original synthetic lamp-order task using a local MLX model.
+context using a local MLX model: a lamp-order task and two four-turn notebook diagnostics.
 
 The core uses Foundation only. `TokenCounting` prepares/counts the complete
 prompt, `ContextModelBackend` consumes those exact token IDs, and
@@ -47,6 +47,32 @@ cache under `~/Library/Caches`; later runs reuse the files. Model revision:
 `3b1b1768f8f8cf8351c712464f906e86c2b8269e`. Downloads are the only external
 service needed; inference and native context-tool execution run on this Mac.
 
+The default **Exact retention** task streams four updates into one session and
+checks the live notebook plus exact JSON answers after every call. **State updates**
+adds overwrites and removal. **Lamp order** retains the original single-task demo.
+Enable **Context pressure** for more incoming telemetry. The sequential tasks
+use a 4,096-token window, 24,000-token per-turn allowance, 80,000-token whole-episode
+allowance, four decision attempts of 1,024 output tokens, and 512 completion tokens.
+Both policies receive the same operations and use the same sampling/budgets.
+Budget failures stop explicitly; incoming records are never silently truncated.
+
+These are original diagnostics inspired by the paper, **not official ContextBench
+scores**. Retention checks complete literal values framed by whitespace, quotes,
+commas, semicolons or brackets (an assignment `=` can precede a value). Punctuation
+extensions such as `invoice-0097.old` do not count as `invoice-0097`. Checks run
+before appending that turn's answer. Earlier caller-appended answers count
+as live context. State updates use a separate grader that folds `FACT key=value`
+and `REMOVE key` operation lines in record order. Each answer must match the complete expected string-valued dictionary;
+duplicate fact keys or outer `facts` keys are rejected, including escaped spellings.
+substring matches cannot conceal missing or stale values. The UI shows per-step
+checks, prompt counts, cumulative call usage, original/working records and exact inputs.
+Each step is published after answer delivery; a failed append marks its answer
+unsuccessful and preserves the model result and token usage for inspection.
+Cancellation is checked after progress callbacks and before returning the episode.
+See [sequential validation](docs/sequential-validation.md) for actual positive and
+failed runs, and [the evaluation plan](docs/evaluation-plan.md) for the official
+integration milestone.
+
 The script enables the adapter, builds with Swift Build (including Metal shaders),
 creates an ad-hoc signed development app at `.build/ContextPlayground.app`, and
 launches it. The app is also launchable from Finder after packaging. To compile
@@ -73,11 +99,18 @@ For a reproducible automated run with a visible app and a text report:
 PICO_CONTEXT_SMOKE_REPORT=/tmp/picocontext-live.txt PICO_CONTEXT_SMOKE_IMAGE=/tmp/picocontext-live.png bash Scripts/run-example.sh --smoke
 ```
 
+For the sequential tasks, use `--episode-smoke retention` or
+`--episode-smoke stateUpdates`, optionally followed by `--pressure`:
+
+```sh
+PICO_CONTEXT_SMOKE_REPORT=/tmp/picocontext-episode.txt PICO_CONTEXT_SMOKE_IMAGE=/tmp/picocontext-episode.png bash Scripts/run-example.sh --episode-smoke retention
+```
+
 The image is rendered by SwiftUI from the actual completed live reports. The UI
 shows the original and edited records, roles/protection, accepted or rejected
 edits, the diff, final answer, exact decoded next input, and tokenizer counts.
 Each comparison starts from the same fixture, with the same model and greedy
-sampling. Both modes share an 8,192-token context window, 24,000 total-token
+sampling. The lamp-order modes share an 8,192-token context window, 24,000 total-token
 allowance and 512-token completion cap; editing has at most two attempts of
 1,024 generated tokens each. Edit input/output overhead is included in totals.
 Elapsed inference time excludes initial model loading. The baseline runs first,
@@ -162,6 +195,15 @@ tools, empty edits and malformed/stale keep decisions remain rejections.
 `EditAttempt.outcome` distinguishes edited, kept and rejected attempts;
 `editCallCount` and `keepCallCount` count dispatched decisions separately. All
 decision/recovery input and output remains included in total usage.
+
+`PicoContextDiagnostics` is a separate Foundation-only library for the original
+fixtures, strict grading and sequential runner. It uses the runtime's public
+append/run interfaces and keeps fixture policy out of `PicoContext`. Its runner
+records successful answers through explicit caller transactions and enforces a
+whole-episode token allowance in addition to per-turn limits. Semantic check
+failures remain visible even if later answers are correct. Deterministic tests
+include a backend that loses a retained fact but returns scripted correct answers,
+and a bounded pressure case where append-only fails while compaction continues.
 
 Token-limit failures, missing context decisions and invalid tool calls are explicit
 report outcomes. There is no silent prompt truncation. The fixture correctness

@@ -47,11 +47,12 @@ private func reservedDelimitersInRuntimeMetadataAreRejected(delimiter: String) {
 @Test private func safeMetadataKeepsRolesAndToolLinks() throws {
     let snapshot = context(field: .recordID, text: "caller record: α/lookup")
     let messages = try MLXContextBackend.messages(for: ModelInput(context: snapshot, phase: .completion))
-    #expect(messages.compactMap { $0["role"] as? String } == ["system", "user", "assistant", "tool"])
+    #expect(messages.compactMap { $0["role"] as? String } == ["system", "user", "assistant", "tool", "user"])
     #expect((messages[2]["content"] as? String)?.contains("recordID=caller record: α/lookup") == true)
     let calls = try #require(messages[2]["tool_calls"] as? [[String: any Sendable]])
     #expect(calls[0]["id"] as? String == "lookup-call")
     #expect(messages[3]["tool_call_id"] as? String == "lookup-call")
+    #expect((messages.last?["content"] as? String)?.contains("requested output format") == true)
 }
 
 @Test(arguments: delimiters)
