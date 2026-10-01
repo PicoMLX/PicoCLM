@@ -123,7 +123,47 @@ the same validation/persistence boundary; their token budget is checked when
 `run` is invoked. The library assumes the host authorizes caller-supplied scopes;
 these IDs are separation keys, not an authentication mechanism.
 
-Token-limit failures, model refusal to edit and invalid tool calls are explicit
+## Continue a conversation
+
+`ContextSession.append(_:)` accepts a caller-owned `ContextAppend` with scope,
+base revision and complete records. It appends to both the working context and
+preserved transcript without restoring earlier edited bodies. IDs and tool-call
+IDs cannot be reused after deletion. A failed validation or save changes neither
+view. Transactions are limited to 64 records, 64,000 bytes per body and 128,000
+encoded bytes including metadata. The next run checks the token budget without
+truncating incoming records.
+
+```swift
+let current = await session.context
+try await session.append(ContextAppend(
+    scope: current.scope, baseRevision: current.revision,
+    records: [ContextRecord(id: "follow-up", role: .user,
+                            body: "What is the current warranty?", isProtected: true)]
+))
+let report = try await session.run()
+if report.failure == nil {
+    try await session.append(ContextAppend(
+        scope: report.revised.scope, baseRevision: report.revised.revision,
+        records: [ContextRecord(id: "reply-1", role: .assistant, body: report.answer)]
+    ))
+}
+```
+
+The caller chooses IDs, protection and whether to record a successful answer.
+`run` never appends generated answers implicitly. Completion answers the latest
+caller request while following protected instructions and the initial task.
+The persistence hook stores the working snapshot only; restart recovery of the
+full transcript is deferred with durable storage.
+
+In editable mode, the model chooses one `edit_context` or `keep_context` call.
+`keep_context` accepts only the current `baseRevision`, makes no mutation or save,
+and prepares an exact completion prompt with a protected acknowledgement. Missing
+tools, empty edits and malformed/stale keep decisions remain rejections.
+`EditAttempt.outcome` distinguishes edited, kept and rejected attempts;
+`editCallCount` and `keepCallCount` count dispatched decisions separately. All
+decision/recovery input and output remains included in total usage.
+
+Token-limit failures, missing context decisions and invalid tool calls are explicit
 report outcomes. There is no silent prompt truncation. The fixture correctness
 check matches four expected fact strings and excludes the stale price; it is a
 small demonstration check, not a general semantic evaluator. Shorter final

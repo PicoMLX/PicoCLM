@@ -26,7 +26,7 @@ public actor MLXContextBackend: TokenCounting, ContextModelBackend {
 
     public func prepare(_ input: ModelInput) async throws -> PreparedPrompt {
         let preparedMessages = try Self.messages(for: input)
-        let tools = input.phase == .edit ? [Self.editToolSchema(recordIDs: input.context.records.filter { !$0.isProtected }.map(\.id))] : nil
+        let tools = Self.tools(for: input)
         // Apply the upstream tokenizer directly: missing templates must fail, never flatten roles.
         let tokens = try await container.perform { context in
             try context.tokenizer.applyChatTemplate(messages: preparedMessages, tools: tools,
@@ -73,8 +73,9 @@ public actor MLXContextBackend: TokenCounting, ContextModelBackend {
         if input.phase == .edit {
             let editableResults = input.context.records.filter { $0.role == .tool && !$0.isProtected }.map(\.id).joined(separator: ", ")
             messages.append(["role": "user", "content": """
-            This turn is the context editing phase. Call edit_context now, before giving an answer.
+            This turn is the context decision phase. Choose exactly one tool before giving an answer.
             Use replace to shorten verbose tool results into factual notes that preserve the requested facts.
+            Call keep_context with only baseRevision if the current context already needs no change.
             Editable tool-result record IDs: \(editableResults). Target these IDs; never target instructions or task.
             Each replacement must use these exact keys: action, recordID, body. Put the shorter text in body.
             Use baseRevision \(input.context.revision). Do not change protected instructions or the task.
@@ -82,6 +83,20 @@ public actor MLXContextBackend: TokenCounting, ContextModelBackend {
             """])
         }
         return messages
+    }
+
+    static func tools(for input: ModelInput) -> [[String: any Sendable]]? {
+        guard input.phase == .edit else { return nil }
+        let keep: [String: any Sendable] = ["type": "function", "function": [
+            "name": ContextKeepTool.name,
+            "description": "Explicitly keep the current working context unchanged, then answer on the next call.",
+            "parameters": [
+                "type": "object", "additionalProperties": false,
+                "required": ["baseRevision"],
+                "properties": ["baseRevision": ["type": "integer"]],
+            ] as [String: any Sendable],
+        ] as [String: any Sendable]]
+        return [editToolSchema(recordIDs: input.context.records.filter { !$0.isProtected }.map(\.id)), keep]
     }
 
     public func generate(_ prompt: PreparedPrompt, maxTokens: Int) async throws -> ModelResponse {

@@ -17,7 +17,7 @@ public struct ModelInput: Sendable {
     public var instructions: String {
         switch phase {
         case .edit: ContextEditTool.instructions + "\nCurrent baseRevision: \(context.revision)."
-        case .completion: "Answer the protected initial task from the current working history. Context editing is finished."
+        case .completion: "Respond to the latest caller-owned user request using the current working history. Follow the protected instructions and initial task. Context editing is finished."
         }
     }
 }

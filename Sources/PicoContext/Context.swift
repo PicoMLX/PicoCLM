@@ -65,6 +65,19 @@ public struct ContextSnapshot: Equatable, Codable, Sendable {
     }
 }
 
+/// A caller-owned transaction. Models cannot create records or choose their metadata.
+public struct ContextAppend: Equatable, Sendable {
+    public let scope: ContextScope
+    public let baseRevision: Int
+    public let records: [ContextRecord]
+
+    public init(scope: ContextScope, baseRevision: Int, records: [ContextRecord]) {
+        self.scope = scope
+        self.baseRevision = baseRevision
+        self.records = records
+    }
+}
+
 public enum ContextError: Error, Equatable, LocalizedError, Sendable {
     case invalid(String)
     case scopeMismatch
@@ -90,14 +103,15 @@ public enum ContextError: Error, Equatable, LocalizedError, Sendable {
         case .busy: "A context operation is already in progress."
         case .budgetExceeded(let reason): "Token budget exceeded: \(reason)"
         case .editLimit: "The bounded edit/recovery limit was reached."
-        case .modelDidNotEdit: "The model did not call edit_context."
+        case .modelDidNotEdit: "The model did not call edit_context or keep_context."
         }
     }
 }
 
 /// Value semantics make validation and commit a single atomic mutation.
 public struct WorkingContext: Sendable {
-    public let original: ContextSnapshot
+    /// Every caller-supplied record in arrival order, with its original body.
+    public private(set) var original: ContextSnapshot
     public private(set) var snapshot: ContextSnapshot
 
     public init(_ snapshot: ContextSnapshot) throws {
@@ -178,6 +192,31 @@ public struct WorkingContext: Sendable {
         let candidate = ContextSnapshot(scope: snapshot.scope, revision: snapshot.revision + 1, records: records)
         try Self.validate(candidate)
         guard candidate.records != snapshot.records else { throw ContextError.invalid("edit changes nothing") }
+        snapshot = candidate
+    }
+
+    public mutating func append(_ transaction: ContextAppend) throws {
+        guard transaction.scope == snapshot.scope else { throw ContextError.scopeMismatch }
+        guard transaction.baseRevision == snapshot.revision else {
+            throw ContextError.staleRevision(expected: snapshot.revision, received: transaction.baseRevision)
+        }
+        guard (1...64).contains(transaction.records.count),
+              transaction.records.allSatisfy({ $0.body.utf8.count <= 64_000 }) else {
+            throw ContextError.invalid("append needs 1...64 records with bodies at most 64000 bytes")
+        }
+        // Include metadata and arguments in the transaction bound, not just visible bodies.
+        guard try JSONEncoder().encode(transaction.records).count <= 128_000 else {
+            throw ContextError.invalid("append payload too large")
+        }
+        let revision = snapshot.revision + 1
+        let transcript = ContextSnapshot(scope: snapshot.scope, revision: revision,
+                                         records: original.records + transaction.records)
+        let candidate = ContextSnapshot(scope: snapshot.scope, revision: revision,
+                                        records: snapshot.records + transaction.records)
+        // Validate against preserved history too: deleted IDs and call IDs cannot be reused.
+        try Self.validate(transcript)
+        try Self.validate(candidate)
+        original = transcript
         snapshot = candidate
     }
 }

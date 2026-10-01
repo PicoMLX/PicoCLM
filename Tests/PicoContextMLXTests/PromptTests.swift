@@ -73,6 +73,21 @@ private func toolArgumentsEscapeDelimitersWithoutChangingTheirJSONValue(delimite
     #expect(try JSONDecoder().decode([String: String].self, from: Data(renderedArguments.utf8)) == ["query": argument])
 }
 
+@Test private func editPhaseOffersAnExplicitKeepDecisionAndCompletionDisablesBothTools() throws {
+    let input = ModelInput(context: context(), phase: .edit)
+    let tools = try #require(MLXContextBackend.tools(for: input))
+    let functions = try tools.map { try #require($0["function"] as? [String: any Sendable]) }
+    #expect(functions.compactMap { $0["name"] as? String } == [ContextEditTool.name, ContextKeepTool.name])
+    let parameters = try #require(functions[1]["parameters"] as? [String: any Sendable])
+    #expect(parameters["required"] as? [String] == ["baseRevision"])
+    #expect(parameters["additionalProperties"] as? Bool == false)
+    let properties = try #require(parameters["properties"] as? [String: any Sendable])
+    #expect(Set(properties.keys) == ["baseRevision"])
+    #expect(MLXContextBackend.tools(for: ModelInput(context: context(), phase: .completion)) == nil)
+    let messages = try MLXContextBackend.messages(for: input)
+    #expect((messages.last?["content"] as? String)?.contains("keep_context") == true)
+}
+
 @Test private func schemaSeparatesReplaceAndDeleteOperationShapes() throws {
     let schema = MLXContextBackend.editToolSchema(recordIDs: ["price"])
     let function = try #require(schema["function"] as? [String: any Sendable])

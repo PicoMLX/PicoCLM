@@ -27,7 +27,8 @@ public struct ContextEdit: Equatable, Sendable {
 public enum ContextEditTool {
     public static let name = "edit_context"
     public static let instructions = """
-    Edit working history using edit_context, then answer the protected initial task on the next call.
+    Decide whether to edit working history before answering the latest user request on the next call.
+    Call edit_context for useful changes, or keep_context with baseRevision to explicitly keep it unchanged.
     Replace verbose record bodies with short factual notes. Keep exact facts required by the task.
     Delete stale records only when their complete assistant/tool result group can be deleted together.
     IDs, roles, protection and tool links cannot be edited. Never edit a protected record.
@@ -65,5 +66,21 @@ public enum ContextEditTool {
             }
         }
         return ContextEdit(scope: scope, baseRevision: number, operations: decoded)
+    }
+}
+
+/// A deliberate no-edit decision, separate from a missing tool call or an empty edit.
+public enum ContextKeepTool {
+    public static let name = "keep_context"
+
+    public static func validate(arguments: String, revision: Int) throws {
+        guard arguments.utf8.count <= 1_024,
+              let object = try JSONSerialization.jsonObject(with: Data(arguments.utf8)) as? [String: Any],
+              Set(object.keys) == ["baseRevision"] else {
+            throw ContextError.invalid("keep_context needs only baseRevision")
+        }
+        let data = try JSONSerialization.data(withJSONObject: object["baseRevision"]!, options: .fragmentsAllowed)
+        let received = try JSONDecoder().decode(Int.self, from: data)
+        guard received == revision else { throw ContextError.staleRevision(expected: revision, received: received) }
     }
 }
