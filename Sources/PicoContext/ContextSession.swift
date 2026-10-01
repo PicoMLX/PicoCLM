@@ -129,6 +129,7 @@ public actor ContextSession {
         var control: [ContextRecord] = []
 
         func checkBudget(_ prompt: PreparedPrompt, output: Int, reserve: Int = 0) throws {
+            try Task.checkCancellation()
             guard prompt.tokenCount <= budget.contextWindow - output else {
                 throw ContextError.budgetExceeded("input plus reserved output exceeds the context window")
             }
@@ -162,12 +163,11 @@ public actor ContextSession {
                     try checkBudget(prompt, output: budget.editOutputTokens, reserve: budget.completionOutputTokens)
                     calls.append(prompt)
                     let response = try await backend.generate(prompt, maxTokens: budget.editOutputTokens)
+                    try Task.checkCancellation()
                     guard response.generatedTokens >= 0, response.generatedTokens <= budget.editOutputTokens else {
                         throw ContextError.invalid("backend reported invalid token usage")
                     }
                     generated += response.generatedTokens
-                    editCalls += response.toolCalls.filter { $0.name == ContextEditTool.name }.count
-                    keepCalls += response.toolCalls.filter { $0.name == ContextKeepTool.name }.count
                     let arguments = response.toolCalls.map(\.arguments).joined(separator: "\n")
                     let reservedRecords = original.records + working.snapshot.records + control
                     let candidate: WorkingContext
@@ -184,11 +184,13 @@ public actor ContextSession {
                         var validated = working
                         switch call.name {
                         case ContextEditTool.name:
+                            editCalls += 1
                             let edit = try ContextEditTool.decode(arguments: call.arguments, scope: working.snapshot.scope)
                             try validated.apply(edit)
                             outcome = .edited
                             detail = "Accepted revision \(validated.snapshot.revision). Answer the latest user request now."
                         case ContextKeepTool.name:
+                            keepCalls += 1
                             try ContextKeepTool.validate(arguments: call.arguments, revision: working.snapshot.revision)
                             outcome = .kept
                             detail = "Kept revision \(validated.snapshot.revision). Answer the latest user request now."
@@ -235,6 +237,7 @@ public actor ContextSession {
             finalPrompt = prepared
             calls.append(prepared)
             let response = try await backend.generate(prepared, maxTokens: budget.completionOutputTokens)
+            try Task.checkCancellation()
             guard response.generatedTokens >= 0, response.generatedTokens <= budget.completionOutputTokens else {
                 throw ContextError.invalid("backend reported invalid token usage")
             }

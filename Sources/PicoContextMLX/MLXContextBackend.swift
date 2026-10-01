@@ -154,17 +154,24 @@ public actor MLXContextBackend: TokenCounting, ContextModelBackend {
         }
     }
 
-    private static func editToolSchema(recordIDs: [String]) -> [String: any Sendable] {
-        let action: [String: any Sendable] = ["type": "string", "enum": ["replace", "delete"]]
+    static func editToolSchema(recordIDs: [String]) -> [String: any Sendable] {
         let recordID: [String: any Sendable] = ["type": "string", "enum": recordIDs]
-        let operationProperties: [String: any Sendable] = [
-            "action": action, "recordID": recordID,
-            "body": ["type": "string", "description": "Required for replace; omit for delete."],
-        ]
-        let operation: [String: any Sendable] = [
+        let replaceAction: [String: any Sendable] = ["type": "string", "enum": ["replace"]]
+        let deleteAction: [String: any Sendable] = ["type": "string", "enum": ["delete"]]
+        let replace: [String: any Sendable] = [
             "type": "object", "additionalProperties": false,
-            "required": ["action", "recordID"], "properties": operationProperties,
+            "required": ["action", "recordID", "body"], "properties": [
+                "action": replaceAction, "recordID": recordID,
+                "body": ["type": "string"],
+            ] as [String: any Sendable],
         ]
+        let delete: [String: any Sendable] = [
+            "type": "object", "additionalProperties": false,
+            "required": ["action", "recordID"], "properties": [
+                "action": deleteAction, "recordID": recordID,
+            ] as [String: any Sendable],
+        ]
+        let operation: [String: any Sendable] = ["oneOf": [replace, delete]]
         let operations: [String: any Sendable] = [
             "type": "array", "minItems": 1, "maxItems": 32, "items": operation,
         ]

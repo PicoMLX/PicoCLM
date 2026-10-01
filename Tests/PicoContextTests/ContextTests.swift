@@ -450,6 +450,23 @@ private struct FailingStore: ContextPersistence {
     #expect(report.revised == fixture())
 }
 
+@Test(arguments: [0, 1, 2])
+func rejectedEmissionsAreNotCountedAsNativeEditDispatches(kind: Int) async throws {
+    let response: ModelResponse
+    switch kind {
+    case 0: response = ModelResponse(toolCalls: [ModelToolCall(name: "unknown", arguments: "{}")], generatedTokens: 8)
+    case 1: response = ModelResponse(toolCalls: [ModelToolCall(arguments: validArguments), ModelToolCall(arguments: validArguments)], generatedTokens: 8)
+    default: response = ModelResponse(toolCalls: [ModelToolCall(arguments: validArguments)], generatedTokens: 8, reachedTokenLimit: true)
+    }
+    let backend = DeterministicBackend(edits: [response])
+    let session = try ContextSession(context: fixture(), counter: ByteCounter(), backend: backend)
+    let report = try await session.run(budget: RunBudget(contextWindow: 32_000, totalTokens: 120_000, maxEditAttempts: 1))
+    #expect(report.editCallCount == 0)
+    #expect(report.calls.count == 1)
+    #expect(report.totalGeneratedTokens == 8)
+    #expect(report.revised == fixture())
+}
+
 private actor PausingBackend: ContextModelBackend {
     private var entered = false
     private var watchers: [CheckedContinuation<Void, Never>] = []
@@ -483,6 +500,20 @@ private actor PausingBackend: ContextModelBackend {
     await backend.resume()
     let report = try await run.value
     #expect(report.revised == fixture())
+    try await session.apply(ContextEditTool.decode(arguments: validArguments, scope: scope))
+    #expect(await session.context.revision == 1)
+}
+
+@Test(arguments: [RunMode.appendOnly, .editable])
+func cancellationPropagatesWhenBackendReturnsNormally(mode: RunMode) async throws {
+    let backend = PausingBackend()
+    let session = try ContextSession(context: fixture(), counter: ByteCounter(), backend: backend)
+    let run = Task { try await session.run(mode: mode, budget: RunBudget(contextWindow: 32_000, totalTokens: 120_000, maxEditAttempts: 1)) }
+    await backend.waitUntilEntered()
+    run.cancel()
+    await backend.resume()
+    await #expect(throws: CancellationError.self) { try await run.value }
+    #expect(await session.context == fixture())
     try await session.apply(ContextEditTool.decode(arguments: validArguments, scope: scope))
     #expect(await session.context.revision == 1)
 }

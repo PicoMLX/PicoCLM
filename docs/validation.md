@@ -9,7 +9,7 @@ runtime/compiler combinations are not claimed as tested.
 ## Checks performed
 
 - Default manifest: zero dependencies; only `PicoContext` and `PicoContextTests`.
-- Core build and **29 Swift Testing tests passed**, including parameterized cases.
+- Core build and **31 Swift Testing tests passed**, including parameterized cases.
   Review regression coverage includes caller edits/repeated runs and runtime receipt
   collisions with retained and deleted caller IDs, including retry/acceptance feedback.
   Persistence failures retain the current revision, report the storage error and
@@ -17,10 +17,13 @@ runtime/compiler combinations are not claimed as tested.
   Further regressions verify that an unrenderable historical metric cannot stop a
   repaired current context, accepted parallel tool groups fit one atomic deletion,
   and rejected model delimiters cannot poison bounded retry prompts.
-- **4 opt-in MLX adapter tests passed** (57 cases across parameterized tests), without
+  Unknown/multiple/clipped tool emissions are excluded from native dispatch counts.
+  Cancellation propagates after generation even when the backend returns normally.
+- **5 opt-in MLX adapter tests passed** (58 cases across parameterized tests), without
   loading weights or running inference. They reject Qwen chat/tool-wrapper delimiters in message text,
   record IDs, tool IDs/names and control metadata; safe metadata preserves roles/links
   and escaped tool arguments round-trip without changing their JSON value.
+  Replace/delete schema variants match the strict decoder's required fields.
 - Core cross-build passed with `--triple arm64-apple-ios18.0` and the installed
   iPhoneOS SDK. No iOS example is shipped.
 - Optional adapter and macOS SwiftUI executable built with Swift Build; the MLX
@@ -99,7 +102,7 @@ documents interactive use, offline weights, prerequisites and prototype limits.
 ## Conversation extension checks
 
 Verified with the same installed Swift 6.4 compiler on September 30, 2026:
-**40 core tests** and **5 optional adapter tests (58 cases)** pass. New regressions
+**42 core tests** and **6 optional adapter tests (59 cases)** pass. New regressions
 cover append propagation to exact next input, full original transcript retention
 after body edits, all three scope dimensions, stale revisions, deleted ID reuse,
 complete/partial tool groups, record/body/metadata bounds, persistence atomicity

@@ -87,3 +87,23 @@ private func toolArgumentsEscapeDelimitersWithoutChangingTheirJSONValue(delimite
     let messages = try MLXContextBackend.messages(for: input)
     #expect((messages.last?["content"] as? String)?.contains("keep_context") == true)
 }
+
+@Test private func schemaSeparatesReplaceAndDeleteOperationShapes() throws {
+    let schema = MLXContextBackend.editToolSchema(recordIDs: ["price"])
+    let function = try #require(schema["function"] as? [String: any Sendable])
+    let parameters = try #require(function["parameters"] as? [String: any Sendable])
+    let properties = try #require(parameters["properties"] as? [String: any Sendable])
+    let operations = try #require(properties["operations"] as? [String: any Sendable])
+    let items = try #require(operations["items"] as? [String: any Sendable])
+    let variants = try #require(items["oneOf"] as? [[String: any Sendable]])
+    #expect(variants.count == 2)
+    #expect(variants[0]["required"] as? [String] == ["action", "recordID", "body"])
+    #expect(variants[1]["required"] as? [String] == ["action", "recordID"])
+    for (index, variant) in variants.enumerated() {
+        #expect(variant["additionalProperties"] as? Bool == false)
+        let fields = try #require(variant["properties"] as? [String: any Sendable])
+        #expect(Set(fields.keys) == Set(index == 0 ? ["action", "recordID", "body"] : ["action", "recordID"]))
+        let action = try #require(fields["action"] as? [String: any Sendable])
+        #expect(action["enum"] as? [String] == [index == 0 ? "replace" : "delete"])
+    }
+}
