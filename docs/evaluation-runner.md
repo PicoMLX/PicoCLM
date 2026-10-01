@@ -91,3 +91,37 @@ in both order rotations: append-only retained 4/4 but answered 2/4; editable ret
 2/4 and answered 1/4 before a completion-phase tool call was rejected. The current
 summarization stack changes the shared task guidance and needs its own live report;
 those earlier results are not relabeled as measurements of the revised prompts.
+
+## Live retention at the summarization head
+
+The cached Qwen3 1.7B model ran the three-policy retention profile at source
+commit 9a13d6331fdb6e1812a95d0d5698aae9235fe852. All three order rotations completed
+their model calls. Their JSON export failed when the volume ran out of space;
+the console summary is preserved in this chat's artifacts. It showed append-only
+4/4 context and answers, targeted editing 4/4 context and 2/4 answers, and summary
+2/4 context and 1/4 answers before exhausting bounded decision recovery.
+
+After space recovered, one rotation was repeated using the already built binary,
+with identical task data, prompts and limits. This smaller run saved the complete
+schema-2 trace (exact inputs, tokens, decisions, outputs and contexts).
+
+| Policy | Context checks / planned steps | Answer checks / planned steps | Input tokens | Generated tokens |
+|---|---:|---:|---:|---:|
+| Append-only | 4/4 | 4/4 | 7,243 | 216 |
+| Targeted editing | 4/4 | 1/4 | 12,654 | 647 |
+| Summarization | 2/4 | 1/4 | 11,979 | 420 |
+
+Targeted outputs contained the correct fact dictionary but echoed record headers,
+so the strict JSON grader rejected three answers. They were not cleaned or
+credited. Summarization stopped in step 2: the model first supplied malformed
+arguments and then repeated edits that changed nothing; all were rejected, and
+the last valid context remained available. Unreached steps count as failures.
+Both managed policies used more input than append-only on this small control.
+
+The separate runs produced different targeted answer counts despite greedy
+sampling. Task generation is reproducible; bit-identical GPU output across
+processes is not established. The one-rotation trace is a development control,
+not a balanced statistical benchmark or an official ContextBench result.
+Pressure and longer live state sweeps remain unverified in this stack; deterministic
+tests cover their protocol and budget behavior. Minimum-runtime execution and
+Xcode Cloud results remain unverified locally.
