@@ -57,9 +57,10 @@ Both policies receive the same operations and use the same sampling/budgets.
 Budget failures stop explicitly; incoming records are never silently truncated.
 
 These are original diagnostics inspired by the paper, **not official ContextBench
-scores**. The exact-state grader folds `FACT key=value` and `REMOVE key` lines in
-live record order. It does not credit facts appearing only in a generated JSON
-answer. Each answer must match the complete expected string-valued dictionary;
+scores**. Retention checks exact literal values in live bodies, regardless of note
+style, before appending that turn's answer. Earlier caller-appended answers count
+as live context. State updates use a separate grader that folds `FACT key=value`
+and `REMOVE key` operation lines in record order. Each answer must match the complete expected string-valued dictionary;
 substring matches cannot conceal missing or stale values. The UI shows per-step
 checks, prompt counts, cumulative call usage, original/working records and exact inputs.
 See [the evaluation plan](docs/evaluation-plan.md) for the official integration milestone.

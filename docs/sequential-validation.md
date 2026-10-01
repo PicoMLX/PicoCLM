@@ -13,7 +13,7 @@ were not available for execution.
 
 ## Deterministic checks
 
-`swift test` passes **42 core tests** and **7 diagnostic tests (17 cases)** with
+`swift test` passes **42 core tests** and **8 diagnostic tests (20 cases)** with
 zero external package dependencies, model downloads or GPU inference. Optional
 MLX tests pass **6 tests (59 cases)** without loading weights. The diagnostic
 library and core cross-build for `arm64-apple-ios18.0` with the installed SDK.
@@ -23,8 +23,10 @@ Both modes receive each operation before inference in one continuous session;
 successful answers append through caller-owned transactions. Tests check exact
 next token IDs, preserved original data, tool relationships, prior answer delivery,
 and every call's input/output accounting. A fault backend deliberately loses a
-needle while producing scripted correct answers: retained-context checks still
-fail. Pressure tests show compaction continuing after append-only exceeds the
+needle while producing scripted correct answers: the check before that answer
+appends fails, and later recovery cannot hide the earlier failure. Literal retention
+checks value survival independently of note style; state updates execute the
+separate line-based notebook protocol. Earlier caller-appended answers are live history. Pressure tests show compaction continuing after append-only exceeds the
 window, without truncating the incoming operation. A separate episode allowance
 stops further generation once it cannot reserve the next response.
 

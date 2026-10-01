@@ -12,6 +12,13 @@ public enum DiagnosticScenario: String, CaseIterable, Sendable {
     }
 }
 
+public enum DiagnosticContextCheck: String, Sendable {
+    /// Literal value survival anywhere in live bodies, independently of note formatting.
+    case exactValues
+    /// Execute the fixture's line-based FACT/REMOVE protocol in live record order.
+    case notebookState
+}
+
 public struct DiagnosticStep: Sendable {
     public let id: String
     public let records: [ContextRecord]
@@ -30,11 +37,13 @@ public struct DiagnosticEpisode: Sendable {
     public let title: String
     public let initial: ContextSnapshot
     public let steps: [DiagnosticStep]
+    public let contextCheck: DiagnosticContextCheck
 
-    public init(title: String, initial: ContextSnapshot, steps: [DiagnosticStep]) {
+    public init(title: String, initial: ContextSnapshot, steps: [DiagnosticStep], contextCheck: DiagnosticContextCheck = .notebookState) {
         self.title = title
         self.initial = initial
         self.steps = steps
+        self.contextCheck = contextCheck
     }
 
     /// Original fixed instances, inspired by streamed retention/state diagnostics, not ContextBench tasks.
@@ -86,12 +95,13 @@ public struct DiagnosticEpisode: Sendable {
             ]
             return DiagnosticStep(id: id, records: records, answerRecordID: "\(id)-answer", expectedFacts: expected[index])
         }
-        return Self(title: scenario.title, initial: initial, steps: steps)
+        return Self(title: scenario.title, initial: initial, steps: steps,
+                    contextCheck: scenario == .retention ? .exactValues : .notebookState)
     }
 }
 
 public enum DiagnosticGrading {
-    /// Fold exact notebook lines in live record order. Generated JSON answers do not count as retained notes.
+    /// Fold exact notebook operation lines in live record order.
     public static func retainedState(in context: ContextSnapshot) -> [String: String] {
         var state: [String: String] = [:]
         for line in context.records.flatMap({ $0.body.components(separatedBy: .newlines) }) {
@@ -103,6 +113,20 @@ public enum DiagnosticGrading {
             }
         }
         return state
+    }
+
+    public static func retainedFacts(in context: ContextSnapshot, expected: [String: String],
+                                     check: DiagnosticContextCheck) -> [String: String] {
+        switch check {
+        case .notebookState: return retainedState(in: context)
+        case .exactValues:
+            // Check before this turn's answer appends. Earlier caller-appended answers are live history.
+            return expected.filter { _, value in
+                guard !value.isEmpty else { return false }
+                let pattern = "(?<![\\p{L}\\p{N}_:/-])" + NSRegularExpression.escapedPattern(for: value) + "(?![\\p{L}\\p{N}_:/-])"
+                return context.records.contains { $0.body.range(of: pattern, options: .regularExpression) != nil }
+            }
+        }
     }
 
     public static func answerMatches(_ answer: String, expected: [String: String]) -> Bool {
@@ -170,7 +194,7 @@ public struct DiagnosticRunner: Sendable {
                 let result = try await session.run(mode: mode, budget: stepBudget)
                 run = result
                 used += result.totalInputTokens + result.totalGeneratedTokens
-                let retained = DiagnosticGrading.retainedState(in: result.revised)
+                let retained = DiagnosticGrading.retainedFacts(in: result.revised, expected: step.expectedFacts, check: episode.contextCheck)
                 reports.append(DiagnosticStepReport(step: step, run: result, retainedFacts: retained,
                                                     retainedCorrect: retained == step.expectedFacts,
                                                     answerCorrect: result.failure == nil && DiagnosticGrading.answerMatches(result.answer, expected: step.expectedFacts),

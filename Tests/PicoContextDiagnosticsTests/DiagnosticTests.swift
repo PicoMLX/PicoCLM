@@ -105,10 +105,21 @@ func sequentialEpisodesDeliverOperationsAndCallerRepliesIntoExactNextInput(scena
     let report = try await DiagnosticRunner(counter: DiagnosticCounter(), backend: backend).run(episode, mode: .editable, budget: budget, episodeTokenLimit: 120_000)
     #expect(report.failure == nil)
     #expect(report.steps.allSatisfy { $0.answerCorrect })
-    #expect(report.steps.allSatisfy { !$0.retainedCorrect })
+    #expect(report.steps.first?.retainedCorrect == false)
+    // Later appended answers legitimately restore literal values to live history.
+    #expect(report.steps.dropFirst().allSatisfy { $0.retainedCorrect })
     #expect(!report.passed)
     #expect(!DiagnosticGrading.retainedState(in: report.revised).keys.contains("amber"))
     #expect(report.original.records.contains { $0.body.contains("FACT amber=TQ-4819-X") })
+}
+
+@Test(arguments: ["Notes: FACT amber=TQ-4819-X; FACT beryl=M8:blue/42", "{\"facts\":{\"amber\":\"TQ-4819-X\",\"beryl\":\"M8:blue/42\"}}",
+                  "FACT amber=TQ-4819-XX; FACT beryl=M8:blue/420"])
+func literalRetentionDoesNotDependOnNoteStyleOrCreditExtendedIdentifiers(body: String) {
+    let snapshot = ContextSnapshot(scope: scope, records: [ContextRecord(id: "note", role: .assistant, body: body)])
+    let expected = ["amber": "TQ-4819-X", "beryl": "M8:blue/42"]
+    let retained = DiagnosticGrading.retainedFacts(in: snapshot, expected: expected, check: .exactValues)
+    #expect(retained == (body.contains("TQ-4819-XX") ? [:] : expected))
 }
 
 @Test func updatesAndRemovalsAreGradedInLiveOrder() throws {
