@@ -9,7 +9,13 @@ runtime/compiler combinations are not claimed as tested.
 ## Checks performed
 
 - Default manifest: zero dependencies; only `PicoContext` and `PicoContextTests`.
-- Core build and **22 Swift Testing tests passed**, including parameterized cases.
+- Core build and **25 Swift Testing tests passed**, including parameterized cases.
+  Review regression coverage includes caller edits/repeated runs and runtime receipt
+  collisions with retained and deleted caller IDs, including retry/acceptance feedback.
+- **4 opt-in MLX adapter tests passed** (20 cases across parameterized tests), without
+  loading weights or running inference. They reject Qwen delimiters in message text,
+  record IDs, tool IDs/names and control metadata; safe metadata preserves roles/links
+  and escaped tool arguments round-trip without changing their JSON value.
 - Core cross-build passed with `--triple arm64-apple-ios18.0` and the installed
   iPhoneOS SDK. No iOS example is shipped.
 - Optional adapter and macOS SwiftUI executable built with Swift Build; the MLX

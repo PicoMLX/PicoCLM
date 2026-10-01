@@ -25,11 +25,28 @@ public actor MLXContextBackend: TokenCounting, ContextModelBackend {
     }
 
     public func prepare(_ input: ModelInput) async throws -> PreparedPrompt {
+        let preparedMessages = try Self.messages(for: input)
+        let tools = input.phase == .edit ? [Self.editToolSchema(recordIDs: input.context.records.filter { !$0.isProtected }.map(\.id))] : nil
+        // Apply the upstream tokenizer directly: missing templates must fail, never flatten roles.
+        let tokens = try await container.perform { context in
+            try context.tokenizer.applyChatTemplate(messages: preparedMessages, tools: tools,
+                                                    additionalContext: ["enable_thinking": false])
+        }
+        let rendered = await container.decode(tokens: tokens)
+        return PreparedPrompt(input: input, tokenIDs: tokens, renderedPrompt: rendered)
+    }
+
+    /// Build and validate prompt text before tokenization, independently of model loading.
+    static func messages(for input: ModelInput) throws -> [Message] {
         try WorkingContext.validate(input.context)
         var messages: [Message] = [["role": "system", "content": input.instructions]]
         for record in input.context.records + input.controlRecords {
-            guard !["<|im_start|>", "<|im_end|>", "<|endoftext|>"].contains(where: record.body.contains) else {
-                throw ContextError.invalid("record body contains a reserved Qwen chat delimiter")
+            let fields = [record.body, record.id] + [record.toolCallID].compactMap { $0 }
+                + record.toolCalls.flatMap { [$0.id, $0.name] }
+            guard !fields.contains(where: { field in
+                ["<|im_start|>", "<|im_end|>", "<|endoftext|>"].contains(where: field.contains)
+            }) else {
+                throw ContextError.invalid("record text or metadata contains a reserved Qwen chat delimiter")
             }
             // Metadata is descriptive text; actual roles and links are always supplied separately.
             var message: Message = [
@@ -60,15 +77,7 @@ public actor MLXContextBackend: TokenCounting, ContextModelBackend {
             Return the function call inside <tool_call> and </tool_call>, with name and arguments fields.
             """])
         }
-        let preparedMessages = messages
-        let tools = input.phase == .edit ? [Self.editToolSchema(recordIDs: input.context.records.filter { !$0.isProtected }.map(\.id))] : nil
-        // Apply the upstream tokenizer directly: missing templates must fail, never flatten roles.
-        let tokens = try await container.perform { context in
-            try context.tokenizer.applyChatTemplate(messages: preparedMessages, tools: tools,
-                                                    additionalContext: ["enable_thinking": false])
-        }
-        let rendered = await container.decode(tokens: tokens)
-        return PreparedPrompt(input: input, tokenIDs: tokens, renderedPrompt: rendered)
+        return messages
     }
 
     public func generate(_ prompt: PreparedPrompt, maxTokens: Int) async throws -> ModelResponse {

@@ -26,6 +26,13 @@ measurements. It covers atomic validation, protected content, scopes, tool group
 bounded recovery, budgets, persistence failure, concurrency, cancellation and
 actual next-input propagation.
 
+The opt-in adapter tests check prompt construction without loading weights or
+running inference. They require the MLX source dependencies and Metal build tools:
+
+```sh
+PICO_CONTEXT_ENABLE_MLX=1 swift test --build-system swiftbuild --disable-index-store -j 2
+```
+
 ## Run the example
 
 From the repository root:

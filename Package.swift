@@ -23,6 +23,7 @@ if enableMLX {
     targets.append(.executableTarget(name: "ContextPlayground", dependencies: [
         "PicoContext", "PicoContextMLX",
     ], path: "Examples/ContextPlayground"))
+    targets.append(.testTarget(name: "PicoContextMLXTests", dependencies: ["PicoContext", "PicoContextMLX"]))
 }
 let package = Package(
     name: "PicoContext", platforms: [.macOS(.v15), .iOS(.v18)],
