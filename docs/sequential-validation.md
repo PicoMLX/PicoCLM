@@ -15,7 +15,7 @@ were not available for execution.
 
 `swift test` passes **42 core tests** and **9 diagnostic tests (21 cases)** with
 zero external package dependencies, model downloads or GPU inference. Optional
-MLX tests pass **6 tests (59 cases)** without loading weights. The diagnostic
+MLX tests pass **7 tests (61 cases)** without loading weights. The diagnostic
 library and core cross-build for `arm64-apple-ios18.0` with the installed SDK.
 The macOS SwiftUI app and its Metal resources build with Swift Build.
 
@@ -39,7 +39,20 @@ sampling and budgets. The below-window profile has 12 telemetry lines per update
 a 4,096-token window, 24,000 per-turn tokens, 80,000 whole-episode tokens, four
 bounded decision attempts of 1,024 output tokens, and 512 completion tokens.
 
-The state-update run completed all four steps. Append-only retained the exact
+The current retention run passed all four literal-context and exact-answer checks
+in both modes. The editable trajectory dispatched four accepted edits and used
+11,580 input / 331 generated tokens in 51.37 seconds, versus 6,059 / 99 in
+9.33 seconds for append-only. Its last completion prompt was 1,406 tokens versus
+2,258 in append-only. Editing still cost more overall on this small fixture.
+The [raw retention transcript](live-retention.txt) includes both policies, generated
+edits and exact next inputs. This image is rendered by SwiftUI from those actual
+reports, not a desktop capture.
+
+![Actual four-turn retention run](images/sequential-retention.png)
+
+The recorded state-update development run completed all four steps. Its request
+text predates the latest explicit JSON shape and is preserved in the
+[raw state transcript](live-state-updates.txt). Append-only retained the exact
 live state and returned exact string-valued JSON at every step. Editable mode
 returned three correct answers but failed all four live-context checks: it joined
 multiple operation lines with semicolons, then invented a value during an update.

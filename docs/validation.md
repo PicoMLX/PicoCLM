@@ -6,7 +6,7 @@ tools **6.2**, Swift 6 language mode, macOS 15 and iOS 18. An actual Swift 6.2
 toolchain and macOS 15 / iOS 18 devices were not available on this host, so those
 runtime/compiler combinations are not claimed as tested.
 
-## Checks performed
+## Prototype PR #1 checks
 
 - Default manifest: zero dependencies; only `PicoContext` and `PicoContextTests`.
 - Core build and **31 Swift Testing tests passed**, including parameterized cases.
@@ -101,8 +101,11 @@ documents interactive use, offline weights, prerequisites and prototype limits.
 
 ## Conversation extension checks
 
+The sequential library, current live diagnostics and their separate grading modes
+are documented in [sequential validation](sequential-validation.md).
+
 Verified with the same installed Swift 6.4 compiler on September 30, 2026:
-**42 core tests** and **6 optional adapter tests (59 cases)** pass. New regressions
+**42 core tests** and **7 optional adapter tests (61 cases)** pass. New regressions
 cover append propagation to exact next input, full original transcript retention
 after body edits, all three scope dimensions, stale revisions, deleted ID reuse,
 complete/partial tool groups, record/body/metadata bounds, persistence atomicity

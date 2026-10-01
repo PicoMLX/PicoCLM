@@ -1,0 +1,795 @@
+Model: mlx-community/Qwen3-1.7B-4bit
+Finished. Compare retained context and structured answers at every step.
+
+Exact retention · appendOnly: completed
+Retained context: 4/4; exact answers: 4/4
+Total input: 6059; generated: 99; elapsed: 9.331138968467712 s
+step-1: retained=true, answer=true, prompt=781->781, edits=0, keeps=0
+step-2: retained=true, answer=true, prompt=1267->1267, edits=0, keeps=0
+step-3: retained=true, answer=true, prompt=1753->1753, edits=0, keeps=0
+step-4: retained=true, answer=true, prompt=2258->2258, edits=0, keeps=0
+
+Exact retention · editable: completed
+Retained context: 4/4; exact answers: 4/4
+Total input: 11580; generated: 331; elapsed: 51.36692702770233 s
+step-1: retained=true, answer=true, prompt=781->656, edits=1, keeps=0
+step-2: retained=true, answer=true, prompt=1013->910, edits=1, keeps=0
+step-3: retained=true, answer=true, prompt=1256->1165, edits=1, keeps=0
+step-4: retained=true, answer=true, prompt=1529->1406, edits=1, keeps=0
+
+MODE: appendOnly
+step-1
+Expected: ["amber": "TQ-4819-X"]
+Retained: ["amber": "TQ-4819-X"]
+Answer: {"facts":{"amber":"TQ-4819-X"}}
+Attempts:
+EXACT NEXT INPUT
+<|im_start|>system
+Respond to the latest caller-owned user request using the current working history. Follow the protected instructions and initial task. Context editing is finished.<|im_end|>
+<|im_start|>system
+[recordID=instructions; protected=true; callIDs=; resultFor=none]
+Maintain an exact notebook through a sequence of updates supplied in tool results.
+A line of the form FACT key=value assigns a string value; newer assignments replace older values.
+A line of the form REMOVE key deletes that key. Telemetry is irrelevant.
+During context editing, preserve the complete current notebook as separate exact FACT key=value lines.
+Keep each FACT or REMOVE operation on its own line. Never join operations with semicolons.
+When shortening a tool result, copy its operation lines exactly and remove only telemetry.
+Keep deletions effective; do not let an older assignment resurrect a removed key.
+During the context decision phase, call one of the offered context tools instead of answering.
+During the completion phase, answer the latest user request with only a JSON object containing facts, a dictionary of string values.
+Return every current key with its exact value, no removed keys, explanations or Markdown fences.
+Every JSON value must be a quoted string, even numeric text. Do not output JSON numbers.<|im_end|>
+<|im_start|>user
+[recordID=task; protected=true; callIDs=; resultFor=none]
+Process each incoming notebook update and report the complete current notebook.<|im_end|>
+<|im_start|>assistant
+[recordID=step-1-call; protected=false; callIDs=step-1-input; resultFor=none]
+
+<tool_call>
+{"name": "notebook_input", "arguments": {"step":1}}
+</tool_call><|im_end|>
+<|im_start|>user
+<tool_response>
+[recordID=step-1-data; protected=false; callIDs=; resultFor=step-1-input]
+FACT amber=TQ-4819-X
+Telemetry batch 1, tick 0: probe ready; routing sample discarded; no notebook change.
+Telemetry batch 1, tick 1: probe ready; routing sample discarded; no notebook change.
+Telemetry batch 1, tick 2: probe ready; routing sample discarded; no notebook change.
+Telemetry batch 1, tick 3: probe ready; routing sample discarded; no notebook change.
+Telemetry batch 1, tick 4: probe ready; routing sample discarded; no notebook change.
+Telemetry batch 1, tick 5: probe ready; routing sample discarded; no notebook change.
+Telemetry batch 1, tick 6: probe ready; routing sample discarded; no notebook change.
+Telemetry batch 1, tick 7: probe ready; routing sample discarded; no notebook change.
+Telemetry batch 1, tick 8: probe ready; routing sample discarded; no notebook change.
+Telemetry batch 1, tick 9: probe ready; routing sample discarded; no notebook change.
+Telemetry batch 1, tick 10: probe ready; routing sample discarded; no notebook change.
+Telemetry batch 1, tick 11: probe ready; routing sample discarded; no notebook change.
+</tool_response><|im_end|>
+<|im_start|>user
+[recordID=step-1-request; protected=true; callIDs=; resultFor=none]
+Report the complete current notebook. Return only this JSON shape, replacing placeholders with exact values from the notebook: {"facts":{"amber":"<value from notebook>"}}. The facts field must be an object, not a string. Quote every value, including numeric text. No FACT lines, record headers or Markdown in the answer.<|im_end|>
+<|im_start|>user
+The context decision is finished. Answer the latest caller user request in the working history now.
+Follow its requested output format exactly. Do not echo record headers or tool acknowledgements.
+Context tools are disabled. Return the answer only.<|im_end|>
+<|im_start|>assistant
+<think>
+
+</think>
+
+
+
+step-2
+Expected: ["beryl": "M8:blue/42", "amber": "TQ-4819-X"]
+Retained: ["beryl": "M8:blue/42", "amber": "TQ-4819-X"]
+Answer: {"facts":{"amber":"TQ-4819-X","beryl":"M8:blue/42"}}
+Attempts:
+EXACT NEXT INPUT
+<|im_start|>system
+Respond to the latest caller-owned user request using the current working history. Follow the protected instructions and initial task. Context editing is finished.<|im_end|>
+<|im_start|>system
+[recordID=instructions; protected=true; callIDs=; resultFor=none]
+Maintain an exact notebook through a sequence of updates supplied in tool results.
+A line of the form FACT key=value assigns a string value; newer assignments replace older values.
+A line of the form REMOVE key deletes that key. Telemetry is irrelevant.
+During context editing, preserve the complete current notebook as separate exact FACT key=value lines.
+Keep each FACT or REMOVE operation on its own line. Never join operations with semicolons.
+When shortening a tool result, copy its operation lines exactly and remove only telemetry.
+Keep deletions effective; do not let an older assignment resurrect a removed key.
+During the context decision phase, call one of the offered context tools instead of answering.
+During the completion phase, answer the latest user request with only a JSON object containing facts, a dictionary of string values.
+Return every current key with its exact value, no removed keys, explanations or Markdown fences.
+Every JSON value must be a quoted string, even numeric text. Do not output JSON numbers.<|im_end|>
+<|im_start|>user
+[recordID=task; protected=true; callIDs=; resultFor=none]
+Process each incoming notebook update and report the complete current notebook.<|im_end|>
+<|im_start|>assistant
+[recordID=step-1-call; protected=false; callIDs=step-1-input; resultFor=none]
+
+<tool_call>
+{"name": "notebook_input", "arguments": {"step":1}}
+</tool_call><|im_end|>
+<|im_start|>user
+<tool_response>
+[recordID=step-1-data; protected=false; callIDs=; resultFor=step-1-input]
+FACT amber=TQ-4819-X
+Telemetry batch 1, tick 0: probe ready; routing sample discarded; no notebook change.
+Telemetry batch 1, tick 1: probe ready; routing sample discarded; no notebook change.
+Telemetry batch 1, tick 2: probe ready; routing sample discarded; no notebook change.
+Telemetry batch 1, tick 3: probe ready; routing sample discarded; no notebook change.
+Telemetry batch 1, tick 4: probe ready; routing sample discarded; no notebook change.
+Telemetry batch 1, tick 5: probe ready; routing sample discarded; no notebook change.
+Telemetry batch 1, tick 6: probe ready; routing sample discarded; no notebook change.
+Telemetry batch 1, tick 7: probe ready; routing sample discarded; no notebook change.
+Telemetry batch 1, tick 8: probe ready; routing sample discarded; no notebook change.
+Telemetry batch 1, tick 9: probe ready; routing sample discarded; no notebook change.
+Telemetry batch 1, tick 10: probe ready; routing sample discarded; no notebook change.
+Telemetry batch 1, tick 11: probe ready; routing sample discarded; no notebook change.
+</tool_response><|im_end|>
+<|im_start|>user
+[recordID=step-1-request; protected=true; callIDs=; resultFor=none]
+Report the complete current notebook. Return only this JSON shape, replacing placeholders with exact values from the notebook: {"facts":{"amber":"<value from notebook>"}}. The facts field must be an object, not a string. Quote every value, including numeric text. No FACT lines, record headers or Markdown in the answer.<|im_end|>
+<|im_start|>assistant
+[recordID=step-1-answer; protected=false; callIDs=; resultFor=none]
+{"facts":{"amber":"TQ-4819-X"}}<|im_end|>
+<|im_start|>assistant
+[recordID=step-2-call; protected=false; callIDs=step-2-input; resultFor=none]
+
+<tool_call>
+{"name": "notebook_input", "arguments": {"step":2}}
+</tool_call><|im_end|>
+<|im_start|>user
+<tool_response>
+[recordID=step-2-data; protected=false; callIDs=; resultFor=step-2-input]
+FACT beryl=M8:blue/42
+Telemetry batch 2, tick 0: probe ready; routing sample discarded; no notebook change.
+Telemetry batch 2, tick 1: probe ready; routing sample discarded; no notebook change.
+Telemetry batch 2, tick 2: probe ready; routing sample discarded; no notebook change.
+Telemetry batch 2, tick 3: probe ready; routing sample discarded; no notebook change.
+Telemetry batch 2, tick 4: probe ready; routing sample discarded; no notebook change.
+Telemetry batch 2, tick 5: probe ready; routing sample discarded; no notebook change.
+Telemetry batch 2, tick 6: probe ready; routing sample discarded; no notebook change.
+Telemetry batch 2, tick 7: probe ready; routing sample discarded; no notebook change.
+Telemetry batch 2, tick 8: probe ready; routing sample discarded; no notebook change.
+Telemetry batch 2, tick 9: probe ready; routing sample discarded; no notebook change.
+Telemetry batch 2, tick 10: probe ready; routing sample discarded; no notebook change.
+Telemetry batch 2, tick 11: probe ready; routing sample discarded; no notebook change.
+</tool_response><|im_end|>
+<|im_start|>user
+[recordID=step-2-request; protected=true; callIDs=; resultFor=none]
+Report the complete current notebook. Return only this JSON shape, replacing placeholders with exact values from the notebook: {"facts":{"amber":"<value from notebook>","beryl":"<value from notebook>"}}. The facts field must be an object, not a string. Quote every value, including numeric text. No FACT lines, record headers or Markdown in the answer.<|im_end|>
+<|im_start|>user
+The context decision is finished. Answer the latest caller user request in the working history now.
+Follow its requested output format exactly. Do not echo record headers or tool acknowledgements.
+Context tools are disabled. Return the answer only.<|im_end|>
+<|im_start|>assistant
+<think>
+
+</think>
+
+
+
+step-3
+Expected: ["beryl": "M8:blue/42", "amber": "TQ-4819-X"]
+Retained: ["beryl": "M8:blue/42", "amber": "TQ-4819-X"]
+Answer: {"facts":{"amber":"TQ-4819-X","beryl":"M8:blue/42"}}
+Attempts:
+EXACT NEXT INPUT
+<|im_start|>system
+Respond to the latest caller-owned user request using the current working history. Follow the protected instructions and initial task. Context editing is finished.<|im_end|>
+<|im_start|>system
+[recordID=instructions; protected=true; callIDs=; resultFor=none]
+Maintain an exact notebook through a sequence of updates supplied in tool results.
+A line of the form FACT key=value assigns a string value; newer assignments replace older values.
+A line of the form REMOVE key deletes that key. Telemetry is irrelevant.
+During context editing, preserve the complete current notebook as separate exact FACT key=value lines.
+Keep each FACT or REMOVE operation on its own line. Never join operations with semicolons.
+When shortening a tool result, copy its operation lines exactly and remove only telemetry.
+Keep deletions effective; do not let an older assignment resurrect a removed key.
+During the context decision phase, call one of the offered context tools instead of answering.
+During the completion phase, answer the latest user request with only a JSON object containing facts, a dictionary of string values.
+Return every current key with its exact value, no removed keys, explanations or Markdown fences.
+Every JSON value must be a quoted string, even numeric text. Do not output JSON numbers.<|im_end|>
+<|im_start|>user
+[recordID=task; protected=true; callIDs=; resultFor=none]
+Process each incoming notebook update and report the complete current notebook.<|im_end|>
+<|im_start|>assistant
+[recordID=step-1-call; protected=false; callIDs=step-1-input; resultFor=none]
+
+<tool_call>
+{"name": "notebook_input", "arguments": {"step":1}}
+</tool_call><|im_end|>
+<|im_start|>user
+<tool_response>
+[recordID=step-1-data; protected=false; callIDs=; resultFor=step-1-input]
+FACT amber=TQ-4819-X
+Telemetry batch 1, tick 0: probe ready; routing sample discarded; no notebook change.
+Telemetry batch 1, tick 1: probe ready; routing sample discarded; no notebook change.
+Telemetry batch 1, tick 2: probe ready; routing sample discarded; no notebook change.
+Telemetry batch 1, tick 3: probe ready; routing sample discarded; no notebook change.
+Telemetry batch 1, tick 4: probe ready; routing sample discarded; no notebook change.
+Telemetry batch 1, tick 5: probe ready; routing sample discarded; no notebook change.
+Telemetry batch 1, tick 6: probe ready; routing sample discarded; no notebook change.
+Telemetry batch 1, tick 7: probe ready; routing sample discarded; no notebook change.
+Telemetry batch 1, tick 8: probe ready; routing sample discarded; no notebook change.
+Telemetry batch 1, tick 9: probe ready; routing sample discarded; no notebook change.
+Telemetry batch 1, tick 10: probe ready; routing sample discarded; no notebook change.
+Telemetry batch 1, tick 11: probe ready; routing sample discarded; no notebook change.
+</tool_response><|im_end|>
+<|im_start|>user
+[recordID=step-1-request; protected=true; callIDs=; resultFor=none]
+Report the complete current notebook. Return only this JSON shape, replacing placeholders with exact values from the notebook: {"facts":{"amber":"<value from notebook>"}}. The facts field must be an object, not a string. Quote every value, including numeric text. No FACT lines, record headers or Markdown in the answer.<|im_end|>
+<|im_start|>assistant
+[recordID=step-1-answer; protected=false; callIDs=; resultFor=none]
+{"facts":{"amber":"TQ-4819-X"}}<|im_end|>
+<|im_start|>assistant
+[recordID=step-2-call; protected=false; callIDs=step-2-input; resultFor=none]
+
+<tool_call>
+{"name": "notebook_input", "arguments": {"step":2}}
+</tool_call><|im_end|>
+<|im_start|>user
+<tool_response>
+[recordID=step-2-data; protected=false; callIDs=; resultFor=step-2-input]
+FACT beryl=M8:blue/42
+Telemetry batch 2, tick 0: probe ready; routing sample discarded; no notebook change.
+Telemetry batch 2, tick 1: probe ready; routing sample discarded; no notebook change.
+Telemetry batch 2, tick 2: probe ready; routing sample discarded; no notebook change.
+Telemetry batch 2, tick 3: probe ready; routing sample discarded; no notebook change.
+Telemetry batch 2, tick 4: probe ready; routing sample discarded; no notebook change.
+Telemetry batch 2, tick 5: probe ready; routing sample discarded; no notebook change.
+Telemetry batch 2, tick 6: probe ready; routing sample discarded; no notebook change.
+Telemetry batch 2, tick 7: probe ready; routing sample discarded; no notebook change.
+Telemetry batch 2, tick 8: probe ready; routing sample discarded; no notebook change.
+Telemetry batch 2, tick 9: probe ready; routing sample discarded; no notebook change.
+Telemetry batch 2, tick 10: probe ready; routing sample discarded; no notebook change.
+Telemetry batch 2, tick 11: probe ready; routing sample discarded; no notebook change.
+</tool_response><|im_end|>
+<|im_start|>user
+[recordID=step-2-request; protected=true; callIDs=; resultFor=none]
+Report the complete current notebook. Return only this JSON shape, replacing placeholders with exact values from the notebook: {"facts":{"amber":"<value from notebook>","beryl":"<value from notebook>"}}. The facts field must be an object, not a string. Quote every value, including numeric text. No FACT lines, record headers or Markdown in the answer.<|im_end|>
+<|im_start|>assistant
+[recordID=step-2-answer; protected=false; callIDs=; resultFor=none]
+{"facts":{"amber":"TQ-4819-X","beryl":"M8:blue/42"}}<|im_end|>
+<|im_start|>assistant
+[recordID=step-3-call; protected=false; callIDs=step-3-input; resultFor=none]
+
+<tool_call>
+{"name": "notebook_input", "arguments": {"step":3}}
+</tool_call><|im_end|>
+<|im_start|>user
+<tool_response>
+[recordID=step-3-data; protected=false; callIDs=; resultFor=step-3-input]
+Telemetry batch 3, tick 0: probe ready; routing sample discarded; no notebook change.
+Telemetry batch 3, tick 1: probe ready; routing sample discarded; no notebook change.
+Telemetry batch 3, tick 2: probe ready; routing sample discarded; no notebook change.
+Telemetry batch 3, tick 3: probe ready; routing sample discarded; no notebook change.
+Telemetry batch 3, tick 4: probe ready; routing sample discarded; no notebook change.
+Telemetry batch 3, tick 5: probe ready; routing sample discarded; no notebook change.
+Telemetry batch 3, tick 6: probe ready; routing sample discarded; no notebook change.
+Telemetry batch 3, tick 7: probe ready; routing sample discarded; no notebook change.
+Telemetry batch 3, tick 8: probe ready; routing sample discarded; no notebook change.
+Telemetry batch 3, tick 9: probe ready; routing sample discarded; no notebook change.
+Telemetry batch 3, tick 10: probe ready; routing sample discarded; no notebook change.
+Telemetry batch 3, tick 11: probe ready; routing sample discarded; no notebook change.
+</tool_response><|im_end|>
+<|im_start|>user
+[recordID=step-3-request; protected=true; callIDs=; resultFor=none]
+Report the complete current notebook. Return only this JSON shape, replacing placeholders with exact values from the notebook: {"facts":{"amber":"<value from notebook>","beryl":"<value from notebook>"}}. The facts field must be an object, not a string. Quote every value, including numeric text. No FACT lines, record headers or Markdown in the answer.<|im_end|>
+<|im_start|>user
+The context decision is finished. Answer the latest caller user request in the working history now.
+Follow its requested output format exactly. Do not echo record headers or tool acknowledgements.
+Context tools are disabled. Return the answer only.<|im_end|>
+<|im_start|>assistant
+<think>
+
+</think>
+
+
+
+step-4
+Expected: ["amber": "TQ-4819-X", "beryl": "M8:blue/42", "coral": "invoice-0097"]
+Retained: ["amber": "TQ-4819-X", "beryl": "M8:blue/42", "coral": "invoice-0097"]
+Answer: {"facts":{"amber":"TQ-4819-X","beryl":"M8:blue/42","coral":"invoice-0097"}}
+Attempts:
+EXACT NEXT INPUT
+<|im_start|>system
+Respond to the latest caller-owned user request using the current working history. Follow the protected instructions and initial task. Context editing is finished.<|im_end|>
+<|im_start|>system
+[recordID=instructions; protected=true; callIDs=; resultFor=none]
+Maintain an exact notebook through a sequence of updates supplied in tool results.
+A line of the form FACT key=value assigns a string value; newer assignments replace older values.
+A line of the form REMOVE key deletes that key. Telemetry is irrelevant.
+During context editing, preserve the complete current notebook as separate exact FACT key=value lines.
+Keep each FACT or REMOVE operation on its own line. Never join operations with semicolons.
+When shortening a tool result, copy its operation lines exactly and remove only telemetry.
+Keep deletions effective; do not let an older assignment resurrect a removed key.
+During the context decision phase, call one of the offered context tools instead of answering.
+During the completion phase, answer the latest user request with only a JSON object containing facts, a dictionary of string values.
+Return every current key with its exact value, no removed keys, explanations or Markdown fences.
+Every JSON value must be a quoted string, even numeric text. Do not output JSON numbers.<|im_end|>
+<|im_start|>user
+[recordID=task; protected=true; callIDs=; resultFor=none]
+Process each incoming notebook update and report the complete current notebook.<|im_end|>
+<|im_start|>assistant
+[recordID=step-1-call; protected=false; callIDs=step-1-input; resultFor=none]
+
+<tool_call>
+{"name": "notebook_input", "arguments": {"step":1}}
+</tool_call><|im_end|>
+<|im_start|>user
+<tool_response>
+[recordID=step-1-data; protected=false; callIDs=; resultFor=step-1-input]
+FACT amber=TQ-4819-X
+Telemetry batch 1, tick 0: probe ready; routing sample discarded; no notebook change.
+Telemetry batch 1, tick 1: probe ready; routing sample discarded; no notebook change.
+Telemetry batch 1, tick 2: probe ready; routing sample discarded; no notebook change.
+Telemetry batch 1, tick 3: probe ready; routing sample discarded; no notebook change.
+Telemetry batch 1, tick 4: probe ready; routing sample discarded; no notebook change.
+Telemetry batch 1, tick 5: probe ready; routing sample discarded; no notebook change.
+Telemetry batch 1, tick 6: probe ready; routing sample discarded; no notebook change.
+Telemetry batch 1, tick 7: probe ready; routing sample discarded; no notebook change.
+Telemetry batch 1, tick 8: probe ready; routing sample discarded; no notebook change.
+Telemetry batch 1, tick 9: probe ready; routing sample discarded; no notebook change.
+Telemetry batch 1, tick 10: probe ready; routing sample discarded; no notebook change.
+Telemetry batch 1, tick 11: probe ready; routing sample discarded; no notebook change.
+</tool_response><|im_end|>
+<|im_start|>user
+[recordID=step-1-request; protected=true; callIDs=; resultFor=none]
+Report the complete current notebook. Return only this JSON shape, replacing placeholders with exact values from the notebook: {"facts":{"amber":"<value from notebook>"}}. The facts field must be an object, not a string. Quote every value, including numeric text. No FACT lines, record headers or Markdown in the answer.<|im_end|>
+<|im_start|>assistant
+[recordID=step-1-answer; protected=false; callIDs=; resultFor=none]
+{"facts":{"amber":"TQ-4819-X"}}<|im_end|>
+<|im_start|>assistant
+[recordID=step-2-call; protected=false; callIDs=step-2-input; resultFor=none]
+
+<tool_call>
+{"name": "notebook_input", "arguments": {"step":2}}
+</tool_call><|im_end|>
+<|im_start|>user
+<tool_response>
+[recordID=step-2-data; protected=false; callIDs=; resultFor=step-2-input]
+FACT beryl=M8:blue/42
+Telemetry batch 2, tick 0: probe ready; routing sample discarded; no notebook change.
+Telemetry batch 2, tick 1: probe ready; routing sample discarded; no notebook change.
+Telemetry batch 2, tick 2: probe ready; routing sample discarded; no notebook change.
+Telemetry batch 2, tick 3: probe ready; routing sample discarded; no notebook change.
+Telemetry batch 2, tick 4: probe ready; routing sample discarded; no notebook change.
+Telemetry batch 2, tick 5: probe ready; routing sample discarded; no notebook change.
+Telemetry batch 2, tick 6: probe ready; routing sample discarded; no notebook change.
+Telemetry batch 2, tick 7: probe ready; routing sample discarded; no notebook change.
+Telemetry batch 2, tick 8: probe ready; routing sample discarded; no notebook change.
+Telemetry batch 2, tick 9: probe ready; routing sample discarded; no notebook change.
+Telemetry batch 2, tick 10: probe ready; routing sample discarded; no notebook change.
+Telemetry batch 2, tick 11: probe ready; routing sample discarded; no notebook change.
+</tool_response><|im_end|>
+<|im_start|>user
+[recordID=step-2-request; protected=true; callIDs=; resultFor=none]
+Report the complete current notebook. Return only this JSON shape, replacing placeholders with exact values from the notebook: {"facts":{"amber":"<value from notebook>","beryl":"<value from notebook>"}}. The facts field must be an object, not a string. Quote every value, including numeric text. No FACT lines, record headers or Markdown in the answer.<|im_end|>
+<|im_start|>assistant
+[recordID=step-2-answer; protected=false; callIDs=; resultFor=none]
+{"facts":{"amber":"TQ-4819-X","beryl":"M8:blue/42"}}<|im_end|>
+<|im_start|>assistant
+[recordID=step-3-call; protected=false; callIDs=step-3-input; resultFor=none]
+
+<tool_call>
+{"name": "notebook_input", "arguments": {"step":3}}
+</tool_call><|im_end|>
+<|im_start|>user
+<tool_response>
+[recordID=step-3-data; protected=false; callIDs=; resultFor=step-3-input]
+Telemetry batch 3, tick 0: probe ready; routing sample discarded; no notebook change.
+Telemetry batch 3, tick 1: probe ready; routing sample discarded; no notebook change.
+Telemetry batch 3, tick 2: probe ready; routing sample discarded; no notebook change.
+Telemetry batch 3, tick 3: probe ready; routing sample discarded; no notebook change.
+Telemetry batch 3, tick 4: probe ready; routing sample discarded; no notebook change.
+Telemetry batch 3, tick 5: probe ready; routing sample discarded; no notebook change.
+Telemetry batch 3, tick 6: probe ready; routing sample discarded; no notebook change.
+Telemetry batch 3, tick 7: probe ready; routing sample discarded; no notebook change.
+Telemetry batch 3, tick 8: probe ready; routing sample discarded; no notebook change.
+Telemetry batch 3, tick 9: probe ready; routing sample discarded; no notebook change.
+Telemetry batch 3, tick 10: probe ready; routing sample discarded; no notebook change.
+Telemetry batch 3, tick 11: probe ready; routing sample discarded; no notebook change.
+</tool_response><|im_end|>
+<|im_start|>user
+[recordID=step-3-request; protected=true; callIDs=; resultFor=none]
+Report the complete current notebook. Return only this JSON shape, replacing placeholders with exact values from the notebook: {"facts":{"amber":"<value from notebook>","beryl":"<value from notebook>"}}. The facts field must be an object, not a string. Quote every value, including numeric text. No FACT lines, record headers or Markdown in the answer.<|im_end|>
+<|im_start|>assistant
+[recordID=step-3-answer; protected=false; callIDs=; resultFor=none]
+{"facts":{"amber":"TQ-4819-X","beryl":"M8:blue/42"}}<|im_end|>
+<|im_start|>assistant
+[recordID=step-4-call; protected=false; callIDs=step-4-input; resultFor=none]
+
+<tool_call>
+{"name": "notebook_input", "arguments": {"step":4}}
+</tool_call><|im_end|>
+<|im_start|>user
+<tool_response>
+[recordID=step-4-data; protected=false; callIDs=; resultFor=step-4-input]
+FACT coral=invoice-0097
+Telemetry batch 4, tick 0: probe ready; routing sample discarded; no notebook change.
+Telemetry batch 4, tick 1: probe ready; routing sample discarded; no notebook change.
+Telemetry batch 4, tick 2: probe ready; routing sample discarded; no notebook change.
+Telemetry batch 4, tick 3: probe ready; routing sample discarded; no notebook change.
+Telemetry batch 4, tick 4: probe ready; routing sample discarded; no notebook change.
+Telemetry batch 4, tick 5: probe ready; routing sample discarded; no notebook change.
+Telemetry batch 4, tick 6: probe ready; routing sample discarded; no notebook change.
+Telemetry batch 4, tick 7: probe ready; routing sample discarded; no notebook change.
+Telemetry batch 4, tick 8: probe ready; routing sample discarded; no notebook change.
+Telemetry batch 4, tick 9: probe ready; routing sample discarded; no notebook change.
+Telemetry batch 4, tick 10: probe ready; routing sample discarded; no notebook change.
+Telemetry batch 4, tick 11: probe ready; routing sample discarded; no notebook change.
+</tool_response><|im_end|>
+<|im_start|>user
+[recordID=step-4-request; protected=true; callIDs=; resultFor=none]
+Report the complete current notebook. Return only this JSON shape, replacing placeholders with exact values from the notebook: {"facts":{"amber":"<value from notebook>","beryl":"<value from notebook>","coral":"<value from notebook>"}}. The facts field must be an object, not a string. Quote every value, including numeric text. No FACT lines, record headers or Markdown in the answer.<|im_end|>
+<|im_start|>user
+The context decision is finished. Answer the latest caller user request in the working history now.
+Follow its requested output format exactly. Do not echo record headers or tool acknowledgements.
+Context tools are disabled. Return the answer only.<|im_end|>
+<|im_start|>assistant
+<think>
+
+</think>
+
+
+
+MODE: editable
+step-1
+Expected: ["amber": "TQ-4819-X"]
+Retained: ["amber": "TQ-4819-X"]
+Answer: {"facts":{"amber":"TQ-4819-X"}}
+Attempts: Accepted revision 2. Answer the latest user request now.
+MODEL OUTPUT
+{"name": "edit_context", "arguments": {"baseRevision": 1, "operations": [{"action": "replace", "recordID": "step-1-data", "body": "FACT amber=TQ-4819-X"}]}}
+ARGUMENTS
+{"operations":[{"body":"FACT amber=TQ-4819-X","recordID":"step-1-data","action":"replace"}],"baseRevision":1}
+EXACT NEXT INPUT
+<|im_start|>system
+Respond to the latest caller-owned user request using the current working history. Follow the protected instructions and initial task. Context editing is finished.<|im_end|>
+<|im_start|>system
+[recordID=instructions; protected=true; callIDs=; resultFor=none]
+Maintain an exact notebook through a sequence of updates supplied in tool results.
+A line of the form FACT key=value assigns a string value; newer assignments replace older values.
+A line of the form REMOVE key deletes that key. Telemetry is irrelevant.
+During context editing, preserve the complete current notebook as separate exact FACT key=value lines.
+Keep each FACT or REMOVE operation on its own line. Never join operations with semicolons.
+When shortening a tool result, copy its operation lines exactly and remove only telemetry.
+Keep deletions effective; do not let an older assignment resurrect a removed key.
+During the context decision phase, call one of the offered context tools instead of answering.
+During the completion phase, answer the latest user request with only a JSON object containing facts, a dictionary of string values.
+Return every current key with its exact value, no removed keys, explanations or Markdown fences.
+Every JSON value must be a quoted string, even numeric text. Do not output JSON numbers.<|im_end|>
+<|im_start|>user
+[recordID=task; protected=true; callIDs=; resultFor=none]
+Process each incoming notebook update and report the complete current notebook.<|im_end|>
+<|im_start|>assistant
+[recordID=step-1-call; protected=false; callIDs=step-1-input; resultFor=none]
+
+<tool_call>
+{"name": "notebook_input", "arguments": {"step":1}}
+</tool_call><|im_end|>
+<|im_start|>user
+<tool_response>
+[recordID=step-1-data; protected=false; callIDs=; resultFor=step-1-input]
+FACT amber=TQ-4819-X
+</tool_response><|im_end|>
+<|im_start|>user
+[recordID=step-1-request; protected=true; callIDs=; resultFor=none]
+Report the complete current notebook. Return only this JSON shape, replacing placeholders with exact values from the notebook: {"facts":{"amber":"<value from notebook>"}}. The facts field must be an object, not a string. Quote every value, including numeric text. No FACT lines, record headers or Markdown in the answer.<|im_end|>
+<|im_start|>assistant
+[recordID=runtime-call-0; protected=true; callIDs=runtime-edit-0-0; resultFor=none]
+
+<tool_call>
+{"name": "edit_context", "arguments": {"operations":[{"body":"FACT amber=TQ-4819-X","recordID":"step-1-data","action":"replace"}],"baseRevision":1}}
+</tool_call><|im_end|>
+<|im_start|>user
+<tool_response>
+[recordID=runtime-result-runtime-edit-0-0; protected=true; callIDs=; resultFor=runtime-edit-0-0]
+Accepted revision 2. Answer the latest user request now.
+</tool_response><|im_end|>
+<|im_start|>user
+The context decision is finished. Answer the latest caller user request in the working history now.
+Follow its requested output format exactly. Do not echo record headers or tool acknowledgements.
+Context tools are disabled. Return the answer only.<|im_end|>
+<|im_start|>assistant
+<think>
+
+</think>
+
+
+
+step-2
+Expected: ["beryl": "M8:blue/42", "amber": "TQ-4819-X"]
+Retained: ["beryl": "M8:blue/42", "amber": "TQ-4819-X"]
+Answer: {"facts":{"amber":"TQ-4819-X","beryl":"M8:blue/42"}}
+Attempts: Accepted revision 5. Answer the latest user request now.
+MODEL OUTPUT
+{"name": "edit_context", "arguments": {"baseRevision": 4, "operations": [{"action": "replace", "recordID": "step-2-data", "body": "FACT amber=TQ-4819-X\nFACT beryl=M8:blue/42"}]}}
+ARGUMENTS
+{"operations":[{"recordID":"step-2-data","body":"FACT amber=TQ-4819-X\nFACT beryl=M8:blue\/42","action":"replace"}],"baseRevision":4}
+EXACT NEXT INPUT
+<|im_start|>system
+Respond to the latest caller-owned user request using the current working history. Follow the protected instructions and initial task. Context editing is finished.<|im_end|>
+<|im_start|>system
+[recordID=instructions; protected=true; callIDs=; resultFor=none]
+Maintain an exact notebook through a sequence of updates supplied in tool results.
+A line of the form FACT key=value assigns a string value; newer assignments replace older values.
+A line of the form REMOVE key deletes that key. Telemetry is irrelevant.
+During context editing, preserve the complete current notebook as separate exact FACT key=value lines.
+Keep each FACT or REMOVE operation on its own line. Never join operations with semicolons.
+When shortening a tool result, copy its operation lines exactly and remove only telemetry.
+Keep deletions effective; do not let an older assignment resurrect a removed key.
+During the context decision phase, call one of the offered context tools instead of answering.
+During the completion phase, answer the latest user request with only a JSON object containing facts, a dictionary of string values.
+Return every current key with its exact value, no removed keys, explanations or Markdown fences.
+Every JSON value must be a quoted string, even numeric text. Do not output JSON numbers.<|im_end|>
+<|im_start|>user
+[recordID=task; protected=true; callIDs=; resultFor=none]
+Process each incoming notebook update and report the complete current notebook.<|im_end|>
+<|im_start|>assistant
+[recordID=step-1-call; protected=false; callIDs=step-1-input; resultFor=none]
+
+<tool_call>
+{"name": "notebook_input", "arguments": {"step":1}}
+</tool_call><|im_end|>
+<|im_start|>user
+<tool_response>
+[recordID=step-1-data; protected=false; callIDs=; resultFor=step-1-input]
+FACT amber=TQ-4819-X
+</tool_response><|im_end|>
+<|im_start|>user
+[recordID=step-1-request; protected=true; callIDs=; resultFor=none]
+Report the complete current notebook. Return only this JSON shape, replacing placeholders with exact values from the notebook: {"facts":{"amber":"<value from notebook>"}}. The facts field must be an object, not a string. Quote every value, including numeric text. No FACT lines, record headers or Markdown in the answer.<|im_end|>
+<|im_start|>assistant
+[recordID=step-1-answer; protected=false; callIDs=; resultFor=none]
+{"facts":{"amber":"TQ-4819-X"}}<|im_end|>
+<|im_start|>assistant
+[recordID=step-2-call; protected=false; callIDs=step-2-input; resultFor=none]
+
+<tool_call>
+{"name": "notebook_input", "arguments": {"step":2}}
+</tool_call><|im_end|>
+<|im_start|>user
+<tool_response>
+[recordID=step-2-data; protected=false; callIDs=; resultFor=step-2-input]
+FACT amber=TQ-4819-X
+FACT beryl=M8:blue/42
+</tool_response><|im_end|>
+<|im_start|>user
+[recordID=step-2-request; protected=true; callIDs=; resultFor=none]
+Report the complete current notebook. Return only this JSON shape, replacing placeholders with exact values from the notebook: {"facts":{"amber":"<value from notebook>","beryl":"<value from notebook>"}}. The facts field must be an object, not a string. Quote every value, including numeric text. No FACT lines, record headers or Markdown in the answer.<|im_end|>
+<|im_start|>assistant
+[recordID=runtime-call-0; protected=true; callIDs=runtime-edit-0-0; resultFor=none]
+
+<tool_call>
+{"name": "edit_context", "arguments": {"operations":[{"recordID":"step-2-data","body":"FACT amber=TQ-4819-X\nFACT beryl=M8:blue\/42","action":"replace"}],"baseRevision":4}}
+</tool_call><|im_end|>
+<|im_start|>user
+<tool_response>
+[recordID=runtime-result-runtime-edit-0-0; protected=true; callIDs=; resultFor=runtime-edit-0-0]
+Accepted revision 5. Answer the latest user request now.
+</tool_response><|im_end|>
+<|im_start|>user
+The context decision is finished. Answer the latest caller user request in the working history now.
+Follow its requested output format exactly. Do not echo record headers or tool acknowledgements.
+Context tools are disabled. Return the answer only.<|im_end|>
+<|im_start|>assistant
+<think>
+
+</think>
+
+
+
+step-3
+Expected: ["beryl": "M8:blue/42", "amber": "TQ-4819-X"]
+Retained: ["beryl": "M8:blue/42", "amber": "TQ-4819-X"]
+Answer: {"facts":{"amber":"TQ-4819-X","beryl":"M8:blue/42"}}
+Attempts: Accepted revision 8. Answer the latest user request now.
+MODEL OUTPUT
+{"name": "edit_context", "arguments": {"baseRevision": 7, "operations": [{"action": "replace", "recordID": "step-3-data", "body": "FACT amber=TQ-4819-X\\nFACT beryl=M8:blue/42"}]}}
+ARGUMENTS
+{"operations":[{"action":"replace","body":"FACT amber=TQ-4819-X\\nFACT beryl=M8:blue\/42","recordID":"step-3-data"}],"baseRevision":7}
+EXACT NEXT INPUT
+<|im_start|>system
+Respond to the latest caller-owned user request using the current working history. Follow the protected instructions and initial task. Context editing is finished.<|im_end|>
+<|im_start|>system
+[recordID=instructions; protected=true; callIDs=; resultFor=none]
+Maintain an exact notebook through a sequence of updates supplied in tool results.
+A line of the form FACT key=value assigns a string value; newer assignments replace older values.
+A line of the form REMOVE key deletes that key. Telemetry is irrelevant.
+During context editing, preserve the complete current notebook as separate exact FACT key=value lines.
+Keep each FACT or REMOVE operation on its own line. Never join operations with semicolons.
+When shortening a tool result, copy its operation lines exactly and remove only telemetry.
+Keep deletions effective; do not let an older assignment resurrect a removed key.
+During the context decision phase, call one of the offered context tools instead of answering.
+During the completion phase, answer the latest user request with only a JSON object containing facts, a dictionary of string values.
+Return every current key with its exact value, no removed keys, explanations or Markdown fences.
+Every JSON value must be a quoted string, even numeric text. Do not output JSON numbers.<|im_end|>
+<|im_start|>user
+[recordID=task; protected=true; callIDs=; resultFor=none]
+Process each incoming notebook update and report the complete current notebook.<|im_end|>
+<|im_start|>assistant
+[recordID=step-1-call; protected=false; callIDs=step-1-input; resultFor=none]
+
+<tool_call>
+{"name": "notebook_input", "arguments": {"step":1}}
+</tool_call><|im_end|>
+<|im_start|>user
+<tool_response>
+[recordID=step-1-data; protected=false; callIDs=; resultFor=step-1-input]
+FACT amber=TQ-4819-X
+</tool_response><|im_end|>
+<|im_start|>user
+[recordID=step-1-request; protected=true; callIDs=; resultFor=none]
+Report the complete current notebook. Return only this JSON shape, replacing placeholders with exact values from the notebook: {"facts":{"amber":"<value from notebook>"}}. The facts field must be an object, not a string. Quote every value, including numeric text. No FACT lines, record headers or Markdown in the answer.<|im_end|>
+<|im_start|>assistant
+[recordID=step-1-answer; protected=false; callIDs=; resultFor=none]
+{"facts":{"amber":"TQ-4819-X"}}<|im_end|>
+<|im_start|>assistant
+[recordID=step-2-call; protected=false; callIDs=step-2-input; resultFor=none]
+
+<tool_call>
+{"name": "notebook_input", "arguments": {"step":2}}
+</tool_call><|im_end|>
+<|im_start|>user
+<tool_response>
+[recordID=step-2-data; protected=false; callIDs=; resultFor=step-2-input]
+FACT amber=TQ-4819-X
+FACT beryl=M8:blue/42
+</tool_response><|im_end|>
+<|im_start|>user
+[recordID=step-2-request; protected=true; callIDs=; resultFor=none]
+Report the complete current notebook. Return only this JSON shape, replacing placeholders with exact values from the notebook: {"facts":{"amber":"<value from notebook>","beryl":"<value from notebook>"}}. The facts field must be an object, not a string. Quote every value, including numeric text. No FACT lines, record headers or Markdown in the answer.<|im_end|>
+<|im_start|>assistant
+[recordID=step-2-answer; protected=false; callIDs=; resultFor=none]
+{"facts":{"amber":"TQ-4819-X","beryl":"M8:blue/42"}}<|im_end|>
+<|im_start|>assistant
+[recordID=step-3-call; protected=false; callIDs=step-3-input; resultFor=none]
+
+<tool_call>
+{"name": "notebook_input", "arguments": {"step":3}}
+</tool_call><|im_end|>
+<|im_start|>user
+<tool_response>
+[recordID=step-3-data; protected=false; callIDs=; resultFor=step-3-input]
+FACT amber=TQ-4819-X\nFACT beryl=M8:blue/42
+</tool_response><|im_end|>
+<|im_start|>user
+[recordID=step-3-request; protected=true; callIDs=; resultFor=none]
+Report the complete current notebook. Return only this JSON shape, replacing placeholders with exact values from the notebook: {"facts":{"amber":"<value from notebook>","beryl":"<value from notebook>"}}. The facts field must be an object, not a string. Quote every value, including numeric text. No FACT lines, record headers or Markdown in the answer.<|im_end|>
+<|im_start|>assistant
+[recordID=runtime-call-0; protected=true; callIDs=runtime-edit-0-0; resultFor=none]
+
+<tool_call>
+{"name": "edit_context", "arguments": {"operations":[{"action":"replace","body":"FACT amber=TQ-4819-X\\nFACT beryl=M8:blue\/42","recordID":"step-3-data"}],"baseRevision":7}}
+</tool_call><|im_end|>
+<|im_start|>user
+<tool_response>
+[recordID=runtime-result-runtime-edit-0-0; protected=true; callIDs=; resultFor=runtime-edit-0-0]
+Accepted revision 8. Answer the latest user request now.
+</tool_response><|im_end|>
+<|im_start|>user
+The context decision is finished. Answer the latest caller user request in the working history now.
+Follow its requested output format exactly. Do not echo record headers or tool acknowledgements.
+Context tools are disabled. Return the answer only.<|im_end|>
+<|im_start|>assistant
+<think>
+
+</think>
+
+
+
+step-4
+Expected: ["amber": "TQ-4819-X", "beryl": "M8:blue/42", "coral": "invoice-0097"]
+Retained: ["amber": "TQ-4819-X", "beryl": "M8:blue/42", "coral": "invoice-0097"]
+Answer: {"facts":{"amber":"TQ-4819-X","beryl":"M8:blue/42","coral":"invoice-0097"}}
+Attempts: Accepted revision 11. Answer the latest user request now.
+MODEL OUTPUT
+
+ARGUMENTS
+{"baseRevision":10,"operations":[{"recordID":"step-4-data","body":"FACT coral=invoice-0097","action":"replace"}]}
+EXACT NEXT INPUT
+<|im_start|>system
+Respond to the latest caller-owned user request using the current working history. Follow the protected instructions and initial task. Context editing is finished.<|im_end|>
+<|im_start|>system
+[recordID=instructions; protected=true; callIDs=; resultFor=none]
+Maintain an exact notebook through a sequence of updates supplied in tool results.
+A line of the form FACT key=value assigns a string value; newer assignments replace older values.
+A line of the form REMOVE key deletes that key. Telemetry is irrelevant.
+During context editing, preserve the complete current notebook as separate exact FACT key=value lines.
+Keep each FACT or REMOVE operation on its own line. Never join operations with semicolons.
+When shortening a tool result, copy its operation lines exactly and remove only telemetry.
+Keep deletions effective; do not let an older assignment resurrect a removed key.
+During the context decision phase, call one of the offered context tools instead of answering.
+During the completion phase, answer the latest user request with only a JSON object containing facts, a dictionary of string values.
+Return every current key with its exact value, no removed keys, explanations or Markdown fences.
+Every JSON value must be a quoted string, even numeric text. Do not output JSON numbers.<|im_end|>
+<|im_start|>user
+[recordID=task; protected=true; callIDs=; resultFor=none]
+Process each incoming notebook update and report the complete current notebook.<|im_end|>
+<|im_start|>assistant
+[recordID=step-1-call; protected=false; callIDs=step-1-input; resultFor=none]
+
+<tool_call>
+{"name": "notebook_input", "arguments": {"step":1}}
+</tool_call><|im_end|>
+<|im_start|>user
+<tool_response>
+[recordID=step-1-data; protected=false; callIDs=; resultFor=step-1-input]
+FACT amber=TQ-4819-X
+</tool_response><|im_end|>
+<|im_start|>user
+[recordID=step-1-request; protected=true; callIDs=; resultFor=none]
+Report the complete current notebook. Return only this JSON shape, replacing placeholders with exact values from the notebook: {"facts":{"amber":"<value from notebook>"}}. The facts field must be an object, not a string. Quote every value, including numeric text. No FACT lines, record headers or Markdown in the answer.<|im_end|>
+<|im_start|>assistant
+[recordID=step-1-answer; protected=false; callIDs=; resultFor=none]
+{"facts":{"amber":"TQ-4819-X"}}<|im_end|>
+<|im_start|>assistant
+[recordID=step-2-call; protected=false; callIDs=step-2-input; resultFor=none]
+
+<tool_call>
+{"name": "notebook_input", "arguments": {"step":2}}
+</tool_call><|im_end|>
+<|im_start|>user
+<tool_response>
+[recordID=step-2-data; protected=false; callIDs=; resultFor=step-2-input]
+FACT amber=TQ-4819-X
+FACT beryl=M8:blue/42
+</tool_response><|im_end|>
+<|im_start|>user
+[recordID=step-2-request; protected=true; callIDs=; resultFor=none]
+Report the complete current notebook. Return only this JSON shape, replacing placeholders with exact values from the notebook: {"facts":{"amber":"<value from notebook>","beryl":"<value from notebook>"}}. The facts field must be an object, not a string. Quote every value, including numeric text. No FACT lines, record headers or Markdown in the answer.<|im_end|>
+<|im_start|>assistant
+[recordID=step-2-answer; protected=false; callIDs=; resultFor=none]
+{"facts":{"amber":"TQ-4819-X","beryl":"M8:blue/42"}}<|im_end|>
+<|im_start|>assistant
+[recordID=step-3-call; protected=false; callIDs=step-3-input; resultFor=none]
+
+<tool_call>
+{"name": "notebook_input", "arguments": {"step":3}}
+</tool_call><|im_end|>
+<|im_start|>user
+<tool_response>
+[recordID=step-3-data; protected=false; callIDs=; resultFor=step-3-input]
+FACT amber=TQ-4819-X\nFACT beryl=M8:blue/42
+</tool_response><|im_end|>
+<|im_start|>user
+[recordID=step-3-request; protected=true; callIDs=; resultFor=none]
+Report the complete current notebook. Return only this JSON shape, replacing placeholders with exact values from the notebook: {"facts":{"amber":"<value from notebook>","beryl":"<value from notebook>"}}. The facts field must be an object, not a string. Quote every value, including numeric text. No FACT lines, record headers or Markdown in the answer.<|im_end|>
+<|im_start|>assistant
+[recordID=step-3-answer; protected=false; callIDs=; resultFor=none]
+{"facts":{"amber":"TQ-4819-X","beryl":"M8:blue/42"}}<|im_end|>
+<|im_start|>assistant
+[recordID=step-4-call; protected=false; callIDs=step-4-input; resultFor=none]
+
+<tool_call>
+{"name": "notebook_input", "arguments": {"step":4}}
+</tool_call><|im_end|>
+<|im_start|>user
+<tool_response>
+[recordID=step-4-data; protected=false; callIDs=; resultFor=step-4-input]
+FACT coral=invoice-0097
+</tool_response><|im_end|>
+<|im_start|>user
+[recordID=step-4-request; protected=true; callIDs=; resultFor=none]
+Report the complete current notebook. Return only this JSON shape, replacing placeholders with exact values from the notebook: {"facts":{"amber":"<value from notebook>","beryl":"<value from notebook>","coral":"<value from notebook>"}}. The facts field must be an object, not a string. Quote every value, including numeric text. No FACT lines, record headers or Markdown in the answer.<|im_end|>
+<|im_start|>assistant
+[recordID=runtime-call-0; protected=true; callIDs=runtime-edit-0-0; resultFor=none]
+
+<tool_call>
+{"name": "edit_context", "arguments": {"baseRevision":10,"operations":[{"recordID":"step-4-data","body":"FACT coral=invoice-0097","action":"replace"}]}}
+</tool_call><|im_end|>
+<|im_start|>user
+<tool_response>
+[recordID=runtime-result-runtime-edit-0-0; protected=true; callIDs=; resultFor=runtime-edit-0-0]
+Accepted revision 11. Answer the latest user request now.
+</tool_response><|im_end|>
+<|im_start|>user
+The context decision is finished. Answer the latest caller user request in the working history now.
+Follow its requested output format exactly. Do not echo record headers or tool acknowledgements.
+Context tools are disabled. Return the answer only.<|im_end|>
+<|im_start|>assistant
+<think>
+
+</think>
