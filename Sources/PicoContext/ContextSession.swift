@@ -143,6 +143,7 @@ public actor ContextSession {
                     generated += response.generatedTokens
                     editCalls += response.toolCalls.count
                     let arguments = response.toolCalls.map(\.arguments).joined(separator: "\n")
+                    let reservedRecords = original.records + working.snapshot.records + control
                     var detail: String
                     do {
                         guard !response.reachedTokenLimit else { throw ContextError.budgetExceeded("edit generation hit its output limit") }
@@ -155,7 +156,8 @@ public actor ContextSession {
                         var candidate = working
                         try candidate.apply(edit)
                         detail = "Accepted revision \(candidate.snapshot.revision). Complete the initial task now."
-                        let receipt = Self.receipt(attempt: attempt, calls: response.toolCalls, text: detail)
+                        let receipt = Self.receipt(attempt: attempt, calls: response.toolCalls, text: detail,
+                                                   reserving: reservedRecords)
                         let next = try await counter.prepare(ModelInput(context: candidate.snapshot, phase: .completion, controlRecords: receipt))
                         try checkBudget(next, output: budget.completionOutputTokens)
                         try Task.checkCancellation()
@@ -170,7 +172,8 @@ public actor ContextSession {
                         detail = error.localizedDescription
                         attempts.append(EditAttempt(arguments: arguments, modelText: response.text, accepted: false, detail: detail))
                         control = Self.receipt(attempt: attempt, calls: response.toolCalls,
-                                               text: "Rejected: \(detail) Retry against revision \(working.snapshot.revision).")
+                                               text: "Rejected: \(detail) Retry against revision \(working.snapshot.revision).",
+                                               reserving: reservedRecords)
                     }
                     if accepted { break }
                 }
@@ -203,14 +206,26 @@ public actor ContextSession {
                          elapsedSeconds: Date().timeIntervalSince(start))
     }
 
-    private static func receipt(attempt: Int, calls: [ModelToolCall], text: String) -> [ContextRecord] {
+    private static func receipt(attempt: Int, calls: [ModelToolCall], text: String,
+                                reserving records: [ContextRecord]) -> [ContextRecord] {
+        // Caller IDs are opaque: reserve both kinds of ID, including deleted history and prior feedback.
+        var used = Set(records.flatMap { [$0.id] + $0.toolCalls.map(\.id) + [$0.toolCallID].compactMap { $0 } })
+        func freshID(_ preferred: String) -> String {
+            var candidate = preferred
+            var suffix = 0
+            while !used.insert(candidate).inserted {
+                suffix += 1
+                candidate = "\(preferred)-\(suffix)"
+            }
+            return candidate
+        }
         guard !calls.isEmpty else {
-            return [ContextRecord(id: "runtime-feedback-\(attempt)", role: .user, body: text, isProtected: true)]
+            return [ContextRecord(id: freshID("runtime-feedback-\(attempt)"), role: .user, body: text, isProtected: true)]
         }
         let links = calls.enumerated().map { index, call in
-            ContextToolCall(id: "runtime-edit-\(attempt)-\(index)", name: call.name, arguments: call.arguments)
+            ContextToolCall(id: freshID("runtime-edit-\(attempt)-\(index)"), name: call.name, arguments: call.arguments)
         }
-        return [ContextRecord(id: "runtime-call-\(attempt)", role: .assistant, body: "", isProtected: true, toolCalls: links)]
-            + links.map { ContextRecord(id: "runtime-result-\($0.id)", role: .tool, body: text, isProtected: true, toolCallID: $0.id) }
+        return [ContextRecord(id: freshID("runtime-call-\(attempt)"), role: .assistant, body: "", isProtected: true, toolCalls: links)]
+            + links.map { ContextRecord(id: freshID("runtime-result-\($0.id)"), role: .tool, body: text, isProtected: true, toolCallID: $0.id) }
     }
 }

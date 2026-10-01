@@ -226,6 +226,51 @@ func malformedOrMetadataWritingPayloadsAreRejected(json: String) {
     #expect(report.finalPrompt == nil)
 }
 
+@Test(arguments: [false, true], [false, true])
+func runtimeReceiptIDsAvoidCallerAndDeletedHistoryIDs(withToolCalls: Bool, deleteCallerRecords: Bool) async throws {
+    // Reserve the preferred IDs and a suffix, across both record and tool-call namespaces.
+    let callerIDs = ["runtime-call-0", "runtime-call-0-1", "runtime-edit-0-0", "runtime-edit-0-0-1",
+                     "runtime-result-runtime-edit-0-0-2", "runtime-feedback-0", "runtime-feedback-0-1",
+                     "runtime-call-1", "runtime-edit-1-0", "runtime-result-runtime-edit-1-0-1"]
+    let extraRecords = callerIDs.map { ContextRecord(id: $0, role: .assistant, body: "Caller-owned note") } + [
+        ContextRecord(id: "caller-call", role: .assistant, body: "", toolCalls: [
+            ContextToolCall(id: "runtime-edit-0-0-2", name: "lookup", arguments: "{}"),
+        ]),
+        ContextRecord(id: "caller-result", role: .tool, body: "Caller result", toolCallID: "runtime-edit-0-0-2"),
+    ]
+    let original = ContextSnapshot(scope: scope, records: fixture().records + extraRecords)
+    let rejected = withToolCalls
+        ? ModelResponse(toolCalls: [ModelToolCall(arguments: "not JSON")], generatedTokens: 8)
+        : ModelResponse(text: "no tool", generatedTokens: 8)
+    let editRevision = deleteCallerRecords ? 1 : 0
+    let backend = DeterministicBackend(edits: [rejected, ModelResponse(toolCalls: [ModelToolCall(arguments:
+        validArguments.replacingOccurrences(of: "\"baseRevision\":0", with: "\"baseRevision\":\(editRevision)"))], generatedTokens: 32)])
+    let session = try ContextSession(context: original, counter: ByteCounter(), backend: backend)
+    // Deleted IDs still belong to the preserved transcript and must not be reused for receipts.
+    if deleteCallerRecords {
+        try await session.apply(ContextEdit(scope: scope, baseRevision: 0,
+                                            operations: extraRecords.map { .delete(recordID: $0.id) }))
+    }
+    let report = try await session.run(budget: testBudget)
+    #expect(report.failure == nil)
+    #expect(report.attempts.map(\.accepted) == [false, true])
+    let reserved = Set(original.records.flatMap { [$0.id] + $0.toolCalls.map(\.id) })
+    let prompts = await backend.prompts
+    #expect(prompts.count == 3)
+    for prompt in prompts {
+        let controls = prompt.input.controlRecords
+        let controlIDs = controls.flatMap { [$0.id] + $0.toolCalls.map(\.id) }
+        #expect(Set(controlIDs).count == controlIDs.count)
+        #expect(reserved.isDisjoint(with: controlIDs))
+        // Full prompt history must retain unique IDs and complete, unambiguous tool groups.
+        try WorkingContext.validate(ContextSnapshot(scope: scope, revision: prompt.input.context.revision,
+                                                    records: prompt.input.context.records + controls))
+    }
+    let retryIDs = Set(prompts[1].input.controlRecords.flatMap { [$0.id] + $0.toolCalls.map(\.id) })
+    let finalIDs = Set(prompts[2].input.controlRecords.flatMap { [$0.id] + $0.toolCalls.map(\.id) })
+    #expect(retryIDs.isDisjoint(with: finalIDs))
+}
+
 @Test func appendOnlyBaselineUsesSameFixtureWithoutEdits() async throws {
     let backend = DeterministicBackend()
     let session = try ContextSession(context: fixture(), counter: ByteCounter(), backend: backend)
