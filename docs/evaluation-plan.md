@@ -1,6 +1,6 @@
 # Evaluation plan and paper alignment
 
-Proposed next PR, stacked on prototype [PR #1](https://github.com/PicoMLX/PicoCLM/pull/1).
+Next milestones, stacked on prototype [PR #1](https://github.com/PicoMLX/PicoCLM/pull/1).
 This plan audits the implementation against [Context Language Models, v1](https://arxiv.org/html/2609.37725v1),
 particularly [Section 4.1](https://arxiv.org/html/2609.37725v1#S4.SS1) and
 [Appendix D](https://arxiv.org/html/2609.37725v1#A4). Checked September 30, 2026.
@@ -9,7 +9,7 @@ The existing [design](design.md) cites the paper but omits ContextBench. The
 prototype demonstrates edited history reaching the next inference call. Its
 restricted protocol and single fixed-history task do not reproduce the full paper.
 
-| Area | Paper | PicoContext today | Proposed direction |
+| Area | Paper | Prototype PR #1 | Proposed direction |
 |---|---|---|---|
 | Editing | Unrestricted context-as-file editing through Bash | Replace/delete unprotected bodies by stable ID | Keep the original protected-role/scope constraints; describe this as a constrained adaptation |
 | Edit timing | The model can continue without editing | An accepted edit is mandatory before completion in editable mode | Add an explicit continue-without-edit outcome, distinct from refusal or malformed output |

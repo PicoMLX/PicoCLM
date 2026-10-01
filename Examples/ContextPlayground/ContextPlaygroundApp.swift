@@ -89,7 +89,7 @@ final class PlaygroundModel {
         \(report.mode.rawValue): \(report.failure ?? "completed")
         Fixture check: \(report.failure == nil && PlaygroundFixture.answerIsCorrect(report.answer) ? "passed" : "failed")
         Completion prompt: \(report.originalPromptTokens.map(String.init) ?? "unavailable") → \(report.finalPrompt?.tokenCount ?? 0) tokens
-        Total input: \(report.totalInputTokens); generated: \(report.totalGeneratedTokens); edit calls: \(report.editCallCount)
+        Total input: \(report.totalInputTokens); generated: \(report.totalGeneratedTokens); edit calls: \(report.editCallCount); keep calls: \(report.keepCallCount)
         Elapsed: \(String(format: "%.2f", report.elapsedSeconds)) s
         Answer: \(report.answer)
         Attempts: \(report.attempts.map { $0.detail }.joined(separator: "; "))
@@ -133,7 +133,7 @@ private struct RunSnapshotView: View {
             Text(report.failure == nil && PlaygroundFixture.answerIsCorrect(report.answer) ? "Fixture facts retained ✓" : "Fixture check failed")
             Text("Completion prompt: \(report.originalPromptTokens.map(String.init) ?? "unavailable") → \(report.finalPrompt?.tokenCount ?? 0) tokens")
             Text("Total input: \(report.totalInputTokens) · generated: \(report.totalGeneratedTokens)")
-            Text("Edit calls: \(report.editCallCount) · \(report.elapsedSeconds, specifier: "%.2f") seconds")
+            Text("Edit calls: \(report.editCallCount) · keep calls: \(report.keepCallCount) · \(report.elapsedSeconds, specifier: "%.2f") seconds")
             Text(report.answer).font(.system(.body, design: .monospaced))
         }
         .padding(16).frame(maxWidth: .infinity, alignment: .leading)
@@ -193,7 +193,7 @@ private struct ResultCard: View {
                 Text(report.failure == nil && PlaygroundFixture.answerIsCorrect(report.answer) ? "Fixture facts retained ✓" : "Fixture check failed")
                     .font(.headline)
                 Text("Prompt: \(report.originalPromptTokens.map(String.init) ?? "unavailable") → \(report.finalPrompt?.tokenCount ?? 0) tokens")
-                Text("Total input \(report.totalInputTokens) · generated \(report.totalGeneratedTokens) · edits \(report.editCallCount)")
+                Text("Total input \(report.totalInputTokens) · generated \(report.totalGeneratedTokens) · edits \(report.editCallCount) · keeps \(report.keepCallCount)")
                 Text("\(report.elapsedSeconds, specifier: "%.2f") seconds")
                 Text(report.answer.isEmpty ? (report.failure ?? "No answer") : report.answer).textSelection(.enabled)
             }.frame(maxWidth: .infinity, alignment: .leading).padding(8)

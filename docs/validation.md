@@ -36,6 +36,10 @@ runtime/compiler combinations are not claimed as tested.
 
 ## Recorded live run
 
+The recorded lamp run below predates the conversation extension and its explicit
+keep decision. It is evidence for the original prototype, not a measurement of
+the new tool-choice prompt.
+
 Model: `mlx-community/Qwen3-1.7B-4bit`, revision
 `3b1b1768f8f8cf8351c712464f906e86c2b8269e`.
 Dependencies: mlx-swift-lm **2.31.3**, mlx-swift **0.31.3**; complete versions
@@ -91,3 +95,15 @@ PICO_CONTEXT_SMOKE_REPORT=/tmp/picocontext-live.txt PICO_CONTEXT_SMOKE_IMAGE=/tm
 
 The app stays open after the report is written. The [README](../README.md)
 documents interactive use, offline weights, prerequisites and prototype limits.
+
+## Conversation extension checks
+
+Verified with the same installed Swift 6.4 compiler on September 30, 2026:
+**40 core tests** and **5 optional adapter tests (58 cases)** pass. New regressions
+cover append propagation to exact next input, full original transcript retention
+after body edits, all three scope dimensions, stale revisions, deleted ID reuse,
+complete/partial tool groups, record/body/metadata bounds, persistence atomicity
+and reentrant calls during a pending save. Deliberate keep decisions complete
+without mutation or storage; malformed and stale decisions use bounded recovery.
+The MLX adapter offers both tools only in the decision phase and disables them
+during completion. These checks use no model weights or GPU inference.

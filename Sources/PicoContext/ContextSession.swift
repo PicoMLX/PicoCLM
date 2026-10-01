@@ -20,16 +20,19 @@ public struct RunBudget: Sendable {
 
 public enum RunMode: String, Sendable { case appendOnly, editable }
 
+public enum EditOutcome: String, Sendable { case edited, kept, rejected }
+
 public struct EditAttempt: Sendable {
     public let arguments: String
     public let modelText: String
-    public let accepted: Bool
+    public let outcome: EditOutcome
+    public var accepted: Bool { outcome != .rejected }
     public let detail: String
 }
 
 public struct RunReport: Sendable {
     public let mode: RunMode
-    /// The immutable transcript supplied when the session was created.
+    /// The preserved caller transcript through the latest append, before any body edits.
     public let original: ContextSnapshot
     /// The working revision at the start of this run, including earlier committed edits.
     public let runStart: ContextSnapshot
@@ -46,6 +49,7 @@ public struct RunReport: Sendable {
     public let totalInputTokens: Int
     public let totalGeneratedTokens: Int
     public let editCallCount: Int
+    public let keepCallCount: Int
     public let elapsedSeconds: Double
 
     public var diff: String {
@@ -90,6 +94,19 @@ public actor ContextSession {
         working = candidate
     }
 
+    /// Append a complete caller-owned exchange to both views. Completion never appends implicitly.
+    /// The input budget is checked by the next run; oversized input is reported without truncation.
+    public func append(_ transaction: ContextAppend) async throws {
+        guard !busy else { throw ContextError.busy }
+        busy = true
+        defer { busy = false }
+        var candidate = working
+        try candidate.append(transaction)
+        try Task.checkCancellation()
+        try await persistence?.save(candidate.snapshot)
+        working = candidate
+    }
+
     /// Failures return a report with partial usage and the last valid revision; cancellation propagates.
     public func run(mode: RunMode = .editable, budget: RunBudget = RunBudget()) async throws -> RunReport {
         guard !busy else { throw ContextError.busy }
@@ -106,6 +123,7 @@ public actor ContextSession {
         var attempts: [EditAttempt] = []
         var generated = 0
         var editCalls = 0
+        var keepCalls = 0
         var answer = ""
         var failure: String?
         var control: [ContextRecord] = []
@@ -148,25 +166,35 @@ public actor ContextSession {
                         throw ContextError.invalid("backend reported invalid token usage")
                     }
                     generated += response.generatedTokens
-                    editCalls += response.toolCalls.count
+                    editCalls += response.toolCalls.filter { $0.name == ContextEditTool.name }.count
+                    keepCalls += response.toolCalls.filter { $0.name == ContextKeepTool.name }.count
                     let arguments = response.toolCalls.map(\.arguments).joined(separator: "\n")
                     let reservedRecords = original.records + working.snapshot.records + control
                     let candidate: WorkingContext
                     let detail: String
                     let receipt: [ContextRecord]
                     let next: PreparedPrompt
+                    let outcome: EditOutcome
                     do {
                         guard !response.reachedTokenLimit else { throw ContextError.budgetExceeded("edit generation hit its output limit") }
                         guard response.toolCalls.count == 1 else {
-                            throw response.toolCalls.isEmpty ? ContextError.modelDidNotEdit : ContextError.invalid("one atomic edit_context call is allowed per attempt")
+                            throw response.toolCalls.isEmpty ? ContextError.modelDidNotEdit : ContextError.invalid("one context decision call is allowed per attempt")
                         }
                         let call = response.toolCalls[0]
-                        guard call.name == ContextEditTool.name else { throw ContextError.invalid("unknown context tool") }
-                        let edit = try ContextEditTool.decode(arguments: call.arguments, scope: working.snapshot.scope)
                         var validated = working
-                        try validated.apply(edit)
+                        switch call.name {
+                        case ContextEditTool.name:
+                            let edit = try ContextEditTool.decode(arguments: call.arguments, scope: working.snapshot.scope)
+                            try validated.apply(edit)
+                            outcome = .edited
+                            detail = "Accepted revision \(validated.snapshot.revision). Answer the latest user request now."
+                        case ContextKeepTool.name:
+                            try ContextKeepTool.validate(arguments: call.arguments, revision: working.snapshot.revision)
+                            outcome = .kept
+                            detail = "Kept revision \(validated.snapshot.revision). Answer the latest user request now."
+                        default: throw ContextError.invalid("unknown context tool")
+                        }
                         candidate = validated
-                        detail = "Accepted revision \(candidate.snapshot.revision). Complete the initial task now."
                         receipt = Self.receipt(attempt: attempt, calls: response.toolCalls, text: detail,
                                                reserving: reservedRecords)
                         next = try await counter.prepare(ModelInput(context: candidate.snapshot, phase: .completion, controlRecords: receipt))
@@ -174,26 +202,26 @@ public actor ContextSession {
                     } catch is CancellationError { throw CancellationError() }
                     catch {
                         let detail = error.localizedDescription
-                        attempts.append(EditAttempt(arguments: arguments, modelText: response.text, accepted: false, detail: detail))
+                        attempts.append(EditAttempt(arguments: arguments, modelText: response.text, outcome: .rejected, detail: detail))
                         // Keep raw model values in the report, never in protected retry instructions.
                         // A rejected call may contain invalid JSON, tool names or template delimiters.
                         control = Self.receipt(attempt: attempt, calls: [],
-                                               text: "Rejected: use a valid edit_context call with existing unprotected IDs and complete tool groups. Retry against revision \(working.snapshot.revision).",
+                                               text: "Rejected: choose one valid edit_context or keep_context call. Edits need existing unprotected IDs and complete tool groups. Retry against revision \(working.snapshot.revision).",
                                                reserving: reservedRecords)
                         continue
                     }
                     // Storage errors are runtime failures, not defects the model can repair.
                     try Task.checkCancellation()
-                    do { try await persistence?.save(candidate.snapshot) }
+                    do { if outcome == .edited { try await persistence?.save(candidate.snapshot) } }
                     catch {
-                        attempts.append(EditAttempt(arguments: arguments, modelText: response.text, accepted: false,
+                        attempts.append(EditAttempt(arguments: arguments, modelText: response.text, outcome: .rejected,
                                                     detail: "Commit failed: \(error.localizedDescription)"))
                         throw error
                     }
                     working = candidate
                     control = receipt
                     finalPrompt = next
-                    attempts.append(EditAttempt(arguments: arguments, modelText: response.text, accepted: true, detail: detail))
+                    attempts.append(EditAttempt(arguments: arguments, modelText: response.text, outcome: outcome, detail: detail))
                     accepted = true
                     break
                 }
@@ -222,7 +250,7 @@ public actor ContextSession {
                          finalPrompt: finalPrompt, calls: calls,
                          attempts: attempts, answer: answer, failure: failure,
                          totalInputTokens: calls.reduce(0) { $0 + $1.tokenCount },
-                         totalGeneratedTokens: generated, editCallCount: editCalls,
+                         totalGeneratedTokens: generated, editCallCount: editCalls, keepCallCount: keepCalls,
                          elapsedSeconds: Date().timeIntervalSince(start))
     }
 
