@@ -10,7 +10,7 @@ Build a standalone Swift package, provisionally named `PicoContext`, with a mini
 
 Keep the first implementation small enough to understand and share as a public repository. Use one model, native Swift context-editing tools and a bundled task. Broader framework features and application integrations can follow if the results justify them.
 
-This proposal is based on Meta's [Context Language Models repository](https://github.com/facebookresearch/context-language-models/tree/c979956b75d16f4c734a778ad832cbbcd20d78f5), inspected on September 30, 2026. The package and example are unimplemented; no local model benchmarks were run.
+This proposal is based on Meta's [Context Language Models repository](https://github.com/facebookresearch/context-language-models/tree/c979956b75d16f4c734a778ad832cbbcd20d78f5), inspected on September 30, 2026. The package, macOS example and sequential diagnostics are now implemented. See the evaluation plan for current status; the design below preserves the original proposal.
 
 ## How CLMs work
 
