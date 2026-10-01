@@ -46,7 +46,7 @@ written here. They are not copied task instances or official ContextBench scores
 The new runtime permits explicit no-edit decisions and caller-owned output appends;
 its constrained body tools continue to differ from unrestricted file editing.
 
-As checked September 30, 2026, Meta's repository lists ContextBench as coming soon.
+As checked October 1, 2026, Meta's repository lists ContextBench as coming soon.
 The [evaluation plan](evaluation-plan.md) records a separate milestone to pin the
 official release and verify generator/data/evaluator licensing and protocol before
 integration. No unrelated project sharing the ContextBench name is substituted.
