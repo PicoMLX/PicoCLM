@@ -19,6 +19,11 @@ restricted protocol and single fixed-history task do not reproduce the full pape
 
 ## Recommended stacked implementation
 
+The conversation runtime is implemented in [PR #2](https://github.com/PicoMLX/PicoCLM/pull/2).
+The next stacked change adds the original retention/state diagnostics and live UI
+using the public append/run boundary. These cover the below-window control and
+bounded pressure milestones; the official ContextBench adapter remains future work.
+
 1. Extend the caller/runtime boundary to append records atomically with scope and
    revision checks, complete tool groups and stable metadata. Preserve the full
    original transcript separately from editable working state. Record generated
